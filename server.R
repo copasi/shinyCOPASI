@@ -53,11 +53,11 @@ server <- function(input, output) {
     }
     else if (selectedTask == "Time Course"){
       if (input$timeCourseSelection == 1)
-        res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="deterministic",model=modelData), error = function(error_condition){return(error_condition) })
+        res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="deterministic",model=modelData,save_result_in_memory = T), error = function(error_condition){return(error_condition) })
       else if (input$timeCourseSelection == 2)
-        res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="stochastic",model=modelData), error = function(error_condition){return(error_condition) })
+        res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="stochastic",model=modelData,save_result_in_memory = T), error = function(error_condition){return(error_condition) })
       else if (input$timeCourseSelection == 3)
-        res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="directMethod",model=modelData), error = function(error_condition){return(error_condition) })
+        res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="directMethod",model=modelData,save_result_in_memory = T), error = function(error_condition){return(error_condition) })
       resTask <- res$result
     }
     else if(selectedTask == "Metabolic Control Analysis"){
