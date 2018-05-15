@@ -1,18 +1,21 @@
 
-#library(shiny)
+# library(shiny)
 
-#install.packages("remotes")
-#library(rem)
-#remotes::install_github("jpahle/CoRC")
-#CoRC::getCopasi()
-#install_github("trestletech/shinyTree")
-
+# install.packages("devtools")
+# library(devtools)
+# install_github("jpahle/CoRC")
+# CoRC::getCopasi()
+# install_github("trestletech/shinyTree")
+# install.packages("reshape2")
+# install.packages("ggplot2")
+# install.packages("DT")
+# install.packages("markdown")
 
 library(devtools)
 library(reshape2)
 library(ggplot2)
 library(shinyTree)
-
+library(markdown)
 
 ui <- fluidPage(list(tags$head(HTML('<link rel="icon", href="COPASI-logo.png", type="image/png" />'))),
   div(style="padding: 1px 0px; width: '100%'",
