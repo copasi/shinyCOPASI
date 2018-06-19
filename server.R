@@ -29,19 +29,6 @@ server <- function(input, output) {
     return(error())
   })
   
-  warnText <- renderText({
-    if (exists("message", where=resTask()) && grepl("WARNING",resTask()))
-      warnText <- c(resTask()$message)
-    else
-      warnText <- ''
-    
-    return(warnText)
-  })
-  
-  output$warnOut <- renderText({
-    textOutput("warnText")
-    return(warnText())
-  })
   
   inputFile <- reactiveValues()
   observe({
@@ -92,7 +79,7 @@ server <- function(input, output) {
         res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="stochastic",model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) },error = function(error_condition){return(error_condition) })
       else if (input$timeCourseSelection == 3)
         res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="directMethod",model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
-      resTask <- res$result
+      resTask <- res
     }
     else if(selectedTask == "Metabolic Control Analysis"){
       res <- tryCatch(CoRC::runMCA(perform_steady_state_analysis = input$mcaSelection, model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
@@ -150,7 +137,7 @@ server <- function(input, output) {
   output$tableTC <- DT::renderDataTable({
     if (error() != "" || is.null(resTask()))
       return(NULL)
-    data <- resTask()[, c("Time",input$columns), drop = FALSE]
+    data <- resTask()$result[, c("Time",input$columns), drop = FALSE]
     return(data)
   })
   
@@ -240,7 +227,7 @@ server <- function(input, output) {
       return(NULL)
     
     selectedTask <- selection()
-    data <- resTask()
+    data <- resTask()$result
     if (selectedTask == "Time Course" && "Time" %in% names(data)){
       data <- data[, c("Time",input$columns), drop = FALSE]
       melted <- melt(data,id.vars="Time")
@@ -295,13 +282,13 @@ server <- function(input, output) {
     if(error() != "" || is.null(resTask()))
       return(NULL)
     selectedTask <- selection()
-    
+    data <- resTask()$result
     if (selectedTask == "Steady State"){
       
     }
-    else if (selectedTask == "Time Course" && "Time" %in% names(resTask())){
+    else if (selectedTask == "Time Course" && "Time" %in% names(data)){
       # Get the data set with the appropriate name
-      melted <- melt(resTask(),id.vars="Time")
+      melted <- melt(data,id.vars="Time")
       colnames(melted)[2:3] <- c("Species", "Number")
       colnames <- unique(melted$Species)
       
