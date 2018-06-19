@@ -31,7 +31,7 @@ ui <- fluidPage(list(tags$head(HTML('<link rel="icon", href="COPASI-logo.png", t
           ),
       h6("Model files (.cps or SBML) that are less than 30 MB can only be loaded. For larger models, please use stand-alone program of COPASI."),
       tags$hr(),
-      tags$strong(style = "font-size: 15px;",'Select a task:'),
+      tags$strong(style = "font-size: 15px;",'COPASI:'),
       shinyTree("taskSelection"),
       tags$hr()
     ),
