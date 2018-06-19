@@ -54,7 +54,7 @@ server <- function(input, output) {
     inputFile$reactions <- CoRC::getReactions(model=inputFile$modelData)
     inputFile$globalQuantities <- CoRC::getGlobalQuantities(model=inputFile$modelData)
     inputFile$events <- CoRC::getEvents(model=inputFile$modelData)
-    inputFile$parameters <- CoRC::getSpecies(model=inputFile$modelData)
+    inputFile$parameters <- CoRC::getParameters(model=inputFile$modelData)
     inputFile$stoichiometry <- CoRC::getStoichiometryMatrix(model=inputFile$modelData)
     inputFile$linkMatrix <- CoRC::getLinkMatrix(model=inputFile$modelData)
   })
@@ -225,7 +225,10 @@ server <- function(input, output) {
     } 
     else if (selectedTask == "Parameters"){
       tableParameters <- inputFile$parameters
-      tableParameters <- tableParameters[,c(-1,-7,-9,-11)]
+      if (!is.null(tableParameters)){
+        tableParameters <- tableParameters[,-1]
+        tableParameters$mapping <- gsub(".*\\[|\\]", "", tableParameters$mapping)  
+      }
       return(tableParameters)
     } 
   })
@@ -372,7 +375,7 @@ server <- function(input, output) {
                                      ,'Parameters'= structure('6',sticon=''))
                                 , sticon='')
       ,'Tasks'= structure(list('Steady State'= structure('1',sticon='')
-                               ,'Stoichiometric Analysis'= structure(list('Elementary modes'= structure('1',sticon=''), 'Mass Conservation'= structure('2',sticon='')),sticon='')
+                               ,'Stoichiometric Analysis'= structure(list('Mass Conservation'= structure('1',sticon='')),sticon='')
                                ,'Time Course'= structure('2',sticon='')
                                ,'Metabolic Control Analysis'= structure('3',sticon='')
                                ,'Linear Noise Approximation'= structure('4',sticon=''))
