@@ -19,7 +19,7 @@ library(markdown)
 
 ui <- fluidPage(list(tags$head(HTML('<link rel="icon", href="COPASI-logo.png", type="image/png" />'))),
   div(style="padding: 1px 0px; width: '100%'",
-      titlePanel(title='', windowTitle = "COPASI-web")
+      titlePanel(title='', windowTitle = "ShinyCOPASI")
   ),
   includeMarkdown('title.md'),
   sidebarLayout(
