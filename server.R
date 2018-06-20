@@ -133,12 +133,25 @@ server <- function(input, output, session) {
   
   
 #### To render output tables for different tasks ####
-  output$tableTC <- DT::renderDataTable({
+  output$tableResults <- DT::renderDataTable({
     if (error() != "" || is.null(resTask()))
       return(NULL)
-    data <- resTask()$result[, c("Time",input$columns), drop = FALSE]
+    
+    selectedTask <- selection()
+    if (selectedTask == "Time Course" && "Time" %in% names(resTask()$result)){
+      data <- resTask()$result[, c("Time",input$columns), drop = FALSE]
+    }
+    else if(selectedTask == "Metabolic Control Analysis"){
+      data <- resTask()$elasticities_unscaled
+    }
+    else if(selectedTask == "Linear Noise Approximation"){
+      data <- resTask()$covariance_matrix
+    }
+    else
+      data <- NULL
+    
     return(data)
-  },options = list(scrollX = TRUE))
+  },options = list(scrollX = TRUE, scrollY = "400px"))
   
 
   output$tableSS <- DT::renderDataTable({
@@ -146,36 +159,23 @@ server <- function(input, output, session) {
       return(NULL)
     data <- resTask()$species[,c("name","concentration","rate","transition_time")]
     return(data)
-  },options = list(scrollX = TRUE))
+  },options = list(scrollX = TRUE, scrollY = "400px"))
   
   output$tableJac <- DT::renderDataTable({
     if (error() != "" || is.null(resTask()))
       return(NULL)
     data <- resTask()$jacobian_complete
     return(data)
-  },options = list(scrollX = TRUE))
+  },options = list(scrollX = TRUE, scrollY = "400px"))
   
-  output$tableMCA <- DT::renderDataTable({
-    if (error() != "" || is.null(resTask()))
-      return(NULL)
-    data <- resTask()$elasticities_unscaled
-    return(data)
-  },options = list(scrollX = TRUE))
-  
-  output$tableLNA <- DT::renderDataTable({
-    if (error() != "" || is.null(resTask()))
-      return(NULL)
-    data <- resTask()$covariance_matrix
-    return(data)
-  },options = list(scrollX = TRUE))
   
   output$tableLM <- DT::renderDataTable({
     return(inputFile$linkMatrix)
-  },options = list(scrollX = TRUE))
+  },options = list(scrollX = TRUE, scrollY = "400px"))
   
   output$tableStoich <- DT::renderDataTable({
     return(inputFile$stoichiometry)
-  },options = list(scrollX = TRUE))
+  },options = list(scrollX = TRUE, scrollY = "400px"))
   
   output$tableModel <- DT::renderDataTable({
     selectedTask <- selection()
@@ -205,9 +205,14 @@ server <- function(input, output, session) {
       return(tableGlobalQuantities)
     } 
     else if (selectedTask == "Events"){
-      tableEvents <- inputFile$events
-      tableEvents <- tableEvents[,c(-1)]
-      return(tableEvents)
+      tableEvents <- data.frame(inputFile$events)
+      if (!is.null(tableEvents)){
+        tableEvents <- tableEvents[,-1]
+        tableEvents$assignment_target <- gsub(".*\\(|\\)", "", tableEvents$assignment_target)
+        tableEvents$assignment_expression <- gsub(".*\\(|\\)", "", tableEvents$assignment_expression)
+      }
+      #tableEvents <- tableEvents[,c(-1)]
+      return(data.frame(tableEvents))
     } 
     else if (selectedTask == "Parameters"){
       tableParameters <- inputFile$parameters
@@ -217,7 +222,7 @@ server <- function(input, output, session) {
       }
       return(tableParameters)
     } 
-  },options = list(scrollX = TRUE))
+  },options = list(scrollX = TRUE, scrollY = "400px"))
   
   
 #### To render UI and plots for different tasks ####
@@ -247,26 +252,26 @@ server <- function(input, output, session) {
       tabPanel("Table",DT::dataTableOutput("tableModel"))
     }
     else if (selectedTask == "Time Course"){
-      tabsetPanel(
-        tabPanel("Time Course",DT::dataTableOutput("tableTC")),
-        tabPanel("Plot", plotOutput("plot"))
+      tabsetPanel(id = "TC"
+        ,tabPanel("Time Course",DT::dataTableOutput("tableResults"))
+        ,tabPanel("Plot", plotOutput("plot"))
       )
     }
     else if (selectedTask == "Steady State"){
-      tabsetPanel(
-        tabPanel("Steady State",DT::dataTableOutput("tableSS")),
-        tabPanel("Jacobian",DT::dataTableOutput("tableJac"))
+      tabsetPanel(id = "SS"
+        ,tabPanel("Steady State", DT::dataTableOutput("tableSS"))
+        ,tabPanel("Jacobian", DT::dataTableOutput("tableJac"))
       )
     }
     else if(selectedTask == "Metabolic Control Analysis"){
-      tabPanel("Table",DT::dataTableOutput("tableMCA"))
+      tabPanel("Table",DT::dataTableOutput("tableResults"))
     }
     else if(selectedTask == "Linear Noise Approximation"){
-      tabPanel("Table",DT::dataTableOutput("tableLNA"))
+      tabPanel("Table",DT::dataTableOutput("tableResults"))
     }
     else if(selectedTask == "Mass Conservation"){
-      tabsetPanel(
-        tabPanel("Stoichiometry",DT::dataTableOutput("tableStoich"))
+      tabsetPanel(id = "MC"
+        ,tabPanel("Stoichiometry",DT::dataTableOutput("tableStoich"))
         ,tabPanel("Link Matrix",DT::dataTableOutput("tableLM"))
       )
     }
