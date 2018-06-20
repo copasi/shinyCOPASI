@@ -139,7 +139,7 @@ server <- function(input, output) {
       return(NULL)
     data <- resTask()$result[, c("Time",input$columns), drop = FALSE]
     return(data)
-  })
+  },options = list(scrollX = TRUE))
   
 
   output$tableSS <- DT::renderDataTable({
@@ -147,36 +147,36 @@ server <- function(input, output) {
       return(NULL)
     data <- resTask()$species[,c("name","concentration","rate","transition_time")]
     return(data)
-  })
+  },options = list(scrollX = TRUE))
   
   output$tableJac <- DT::renderDataTable({
     if (error() != "" || is.null(resTask()))
       return(NULL)
     data <- resTask()$jacobian_complete
     return(data)
-  })
+  },options = list(scrollX = TRUE))
   
   output$tableMCA <- DT::renderDataTable({
     if (error() != "" || is.null(resTask()))
       return(NULL)
     data <- resTask()$elasticities_unscaled
     return(data)
-  })
+  },options = list(scrollX = TRUE))
   
   output$tableLNA <- DT::renderDataTable({
     if (error() != "" || is.null(resTask()))
       return(NULL)
     data <- resTask()$covariance_matrix
     return(data)
-  })
+  },options = list(scrollX = TRUE))
   
   output$tableLM <- DT::renderDataTable({
     return(inputFile$linkMatrix)
-  })
+  },options = list(scrollX = TRUE))
   
   output$tableStoich <- DT::renderDataTable({
     return(inputFile$stoichiometry)
-  })
+  },options = list(scrollX = TRUE))
   
   output$tableModel <- DT::renderDataTable({
     selectedTask <- selection()
@@ -218,12 +218,12 @@ server <- function(input, output) {
       }
       return(tableParameters)
     } 
-  })
+  },options = list(scrollX = TRUE))
   
   
 #### To render UI and plots for different tasks ####
   output$plot <- renderPlot({
-    if (error() != "" || is.null(resTask()))
+    if (error() != "" || is.null(resTask()) || is.null(input$columns))
       return(NULL)
     
     selectedTask <- selection()
@@ -283,22 +283,23 @@ server <- function(input, output) {
       return(NULL)
     selectedTask <- selection()
     data <- resTask()$result
-    if (selectedTask == "Steady State"){
-      
-    }
-    else if (selectedTask == "Time Course" && "Time" %in% names(data)){
+    output = tagList()
+    
+    if (selectedTask == "Time Course" && "Time" %in% names(data)){
       # Get the data set with the appropriate name
       melted <- melt(data,id.vars="Time")
       colnames(melted)[2:3] <- c("Species", "Number")
       colnames <- unique(melted$Species)
-      
+    
+      output[[1]] = actionButton("showAll", "Show All")
+      output[[2]] = actionButton("hideAll", "Hide All")
       # Create the checkboxes and select them all by default
-      checkboxGroupInput("columns", "Choose Species", 
+      output[[3]] = checkboxGroupInput("columns", "Selected Species", 
                          choices  = colnames,
                          selected = colnames,
                          inline = T)
     }
-    
+    output
   })
   
 #### To generate options interface for tasks ####
