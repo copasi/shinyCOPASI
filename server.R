@@ -1,6 +1,6 @@
 
 ## server file
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   ## limit for the input file size
   options(shiny.maxRequestSize=30*1024^2) 
@@ -61,7 +61,6 @@ server <- function(input, output) {
 
 #### To execute different tasks ####
   resTask <- eventReactive(input$runTask, {
-
     modelData <- inputFile$modelData
     selectedTask <- selection()
     
@@ -228,6 +227,7 @@ server <- function(input, output) {
     
     selectedTask <- selection()
     data <- resTask()$result
+    
     if (selectedTask == "Time Course" && "Time" %in% names(data)){
       data <- data[, c("Time",input$columns), drop = FALSE]
       melted <- melt(data,id.vars="Time")
@@ -290,11 +290,10 @@ server <- function(input, output) {
       melted <- melt(data,id.vars="Time")
       colnames(melted)[2:3] <- c("Species", "Number")
       colnames <- unique(melted$Species)
-    
-      output[[1]] = actionButton("showAll", "Show All")
-      output[[2]] = actionButton("hideAll", "Hide All")
+      
+      output[[1]] = actionButton("showAll", "Show/Hide All")
       # Create the checkboxes and select them all by default
-      output[[3]] = checkboxGroupInput("columns", "Selected Species", 
+      output[[2]] = checkboxGroupInput("columns", "", 
                          choices  = colnames,
                          selected = colnames,
                          inline = T)
@@ -302,6 +301,30 @@ server <- function(input, output) {
     output
   })
   
+  observeEvent(input$showAll,{
+    if(error() != "" || is.null(resTask()))
+      return(NULL)
+    else {
+      data <- resTask()$result
+      melted <- melt(data,id.vars="Time")
+      colnames(melted)[2:3] <- c("Species", "Number")
+      colnames <- unique(melted$Species)
+      
+      if (input$showAll %% 2 == 0){
+        updateCheckboxGroupInput(session=session,"columns",
+                                 choices  = colnames,
+                                 selected = colnames,
+                                 inline = T)
+      }
+      else {
+        updateCheckboxGroupInput(session=session,"columns",
+                                 choices  = colnames,
+                                 selected = NULL,
+                                 inline = T)
+      }
+      }
+  })
+
 #### To generate options interface for tasks ####
   output$choose_options <- renderUI({
     
