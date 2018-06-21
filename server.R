@@ -164,18 +164,29 @@ server <- function(input, output, session) {
   output$tableJac <- DT::renderDataTable({
     if (error() != "" || is.null(resTask()))
       return(NULL)
-    data <- resTask()$jacobian_complete
-    return(data)
-  },options = list(scrollX = TRUE, scrollY = "400px"))
+    colNames <- colnames(resTask()$jacobian_complete)
+    data <- data.frame(resTask()$jacobian_complete)
+    data <- formattable(data, list(area(col = colnames(data)) ~ color_tile("lightpink", "lightgreen")))
+    colnames(data) <- colNames
+    return(as.datatable(data,options = list(scrollX = TRUE, scrollY = "400px")))
+  })
   
   
   output$tableLM <- DT::renderDataTable({
-    return(inputFile$linkMatrix)
-  },options = list(scrollX = TRUE, scrollY = "400px"))
+    colNames <- colnames(inputFile$linkMatrix)
+    data <- data.frame(inputFile$linkMatrix)
+    data <- formattable(data, list(area(col = colnames(data)) ~ color_tile("lightpink", "lightgreen")))
+    colnames(data) <- colNames
+    return(as.datatable(data,options = list(scrollX = TRUE, scrollY = "400px")))
+  })
   
   output$tableStoich <- DT::renderDataTable({
-    return(inputFile$stoichiometry)
-  },options = list(scrollX = TRUE, scrollY = "400px"))
+    colNames <- colnames(inputFile$stoichiometry)
+    data <- data.frame(inputFile$stoichiometry)
+    data <- formattable(data, list(area(col = colnames(data)) ~ color_tile("lightpink", "lightgreen")))
+    colnames(data) <- colNames
+    return(as.datatable(data,options = list(scrollX = TRUE, scrollY = "400px")))
+  })
   
   output$tableModel <- DT::renderDataTable({
     selectedTask <- selection()

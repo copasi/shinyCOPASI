@@ -16,6 +16,7 @@ library(reshape2)
 library(ggplot2)
 library(shinyTree)
 library(markdown)
+library(formattable)
 
 ui <- fluidPage(list(tags$head(HTML('<link rel="icon", href="COPASI-logo.png", type="image/png" />'))),
   div(style="padding: 1px 0px; width: '100%'",
