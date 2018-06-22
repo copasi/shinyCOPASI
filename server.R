@@ -138,7 +138,7 @@ server <- function(input, output, session) {
       return(NULL)
     
     selectedTask <- selection()
-    if (selectedTask == "Time Course" && "Time" %in% names(resTask()$result)){
+    if (selectedTask == "Time Course" && "Time" %in% names(resTask()$result) && !is.null(input$columns)){
       data <- resTask()$result[, c("Time",input$columns), drop = FALSE]
     }
     else if(selectedTask == "Metabolic Control Analysis"){
@@ -170,7 +170,6 @@ server <- function(input, output, session) {
     colnames(data) <- colNames
     return(as.datatable(data,options = list(scrollX = TRUE, scrollY = "400px")))
   })
-  
   
   output$tableLM <- DT::renderDataTable({
     colNames <- colnames(inputFile$linkMatrix)
@@ -237,6 +236,32 @@ server <- function(input, output, session) {
   
   
 #### To render UI and plots for different tasks ####
+  output$plotOverview <- renderPlot({
+    selectedTask <- selection()
+
+    if (selectedTask == "Species"){
+      tableSpecies <- inputFile$species
+      if (!is.null(tableSpecies) && nrow(tableSpecies) !=0 ){
+        ylabel <- paste("Concentration (",tableSpecies$unit[1], ")")
+        barplot(tableSpecies$initial_concentration, main="Species overview",  ylab=ylabel, names.arg=tableSpecies$name, cex.names=0.8,las=2)
+      }
+    }
+    else if (selectedTask == "Global Quantities"){
+      tableGlobalQuantities <- inputFile$globalQuantities
+      if (!is.null(tableGlobalQuantities) && nrow(tableGlobalQuantities) !=0 ){
+        barplot(tableGlobalQuantities$initial_value, main="Global Quantities overview", ylab= "Initial value", names.arg=tableGlobalQuantities$name, cex.names=0.8,las=2)
+      }
+    }
+    else if (selectedTask == "Parameters"){
+      tableParameters <- inputFile$parameters
+      if (!is.null(tableParameters) && nrow(tableParameters) !=0 && !all(is.na(tableParameters$value))){
+        ylabel <- paste()
+        barplot(tableParameters$value, main="Parameters overview", ylab="Value", names.arg=tableParameters$name, cex.names=0.8,las=2)
+      }
+    }
+    
+  })
+  
   output$plot <- renderPlot({
     if (error() != "" || is.null(resTask()) || is.null(input$columns))
       return(NULL)
@@ -259,9 +284,17 @@ server <- function(input, output, session) {
   ## To load the output UI showing table/Plot
   output$show_output<- renderUI({
     selectedTask <- selection()
-    if (selectedTask %in% c("Reactions","Species","Compartments", "Global Quantities","Events","Parameters")){
-      tabPanel("Table",DT::dataTableOutput("tableModel"))
+    if (is.null(input$datafile))
+      return(NULL)
+    if (selectedTask %in% c("Species","Global Quantities","Parameters")){
+      tabsetPanel(id = "mdl"
+                  ,tabPanel("Table",DT::dataTableOutput("tableModel"))
+                  ,tabPanel("Overview", plotOutput("plotOverview"))
+      )
     }
+    else if (selectedTask %in% c("Reactions","Compartments", "Events")){
+        tabPanel("Table",DT::dataTableOutput("tableModel"))
+      }
     else if (selectedTask == "Time Course"){
       tabsetPanel(id = "TC"
         ,tabPanel("Time Course",DT::dataTableOutput("tableResults"))
@@ -289,7 +322,6 @@ server <- function(input, output, session) {
     else{
       
     }
-    
   })
   
 #### To choose species for table and plot output ** ONLY FOR TIME_COURSE ** ####
