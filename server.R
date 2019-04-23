@@ -72,6 +72,12 @@ server <- function(input, output, session) {
       
     }
     else if (selectedTask == "Time Course"){
+      # Create a Progress object
+      progress <- shiny::Progress$new()
+      # Make sure it closes when we exit this reactive, even if there's an error
+      on.exit(progress$close())
+      progress$set(message = "Running Time course analysis", value = 0)
+      
       if (input$timeCourseSelection == 1)
         res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="deterministic",model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
       else if (input$timeCourseSelection == 2)
@@ -273,7 +279,7 @@ server <- function(input, output, session) {
       data <- data[, c("Time",input$columns), drop = FALSE]
       melted <- melt(data,id.vars="Time")
       colnames(melted)[2:3] <- c("Species", "Number")
-      plot <- ggplot(melted, aes(x=Time, y=Number, group=Species, color= Species)) + geom_line(size = 1) + theme_classic(base_size = 18) + ggtitle("Time-course of selected species") + ylab("#") + xlab("Time (s)")
+      plot <- ggplot(melted, aes(x=Time, y=Number, group=Species, color= Species)) + geom_line(size = 1) + theme_classic(base_size = 18) + ggtitle("Time-course of selected species") + ylab("#") + xlab("Time (s)") + theme(panel.grid=element_line(linetype="dashed", color="light grey", size=0.2), axis.ticks.length=unit(-0.15, "cm"), axis.text.x = element_text(margin=unit(c(0.25,0.25,0.25,0.25),"cm")), axis.text.y = element_text(margin=unit(c(0.25,0.25,0.25,0.25),"cm")) )
       print(plot)
     }
     else{
@@ -382,7 +388,7 @@ server <- function(input, output, session) {
     else{
       textOutput("selection")
     }
-    #, "slices"
+
     output = tagList()
     selectedTask <- selection()
     if (selectedTask %in% c("Reactions","Species","Compartments", "Global Quantities","Events","Parameters")){
