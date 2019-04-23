@@ -58,6 +58,17 @@ server <- function(input, output, session) {
     }
     return(modelData)
   }
+  
+  theme_pm <- function () {
+    theme_bw(base_size=12) + #base_family="Arial Black"
+      theme(
+        panel.grid=element_line(linetype="dashed", color="light grey", size=0.2),
+        axis.ticks.length=unit(-0.15, "cm"),
+        axis.text.x = element_text(margin=unit(c(0.25,0.25,0.25,0.25),"cm")),
+        axis.text.y = element_text(margin=unit(c(0.25,0.25,0.25,0.25),"cm"))
+      )
+  }
+  
 
 #### To execute different tasks ####
   resTask <- eventReactive(input$runTask, {
@@ -279,7 +290,7 @@ server <- function(input, output, session) {
       data <- data[, c("Time",input$columns), drop = FALSE]
       melted <- melt(data,id.vars="Time")
       colnames(melted)[2:3] <- c("Species", "Number")
-      plot <- ggplot(melted, aes(x=Time, y=Number, group=Species, color= Species)) + geom_line(size = 1) + theme_classic(base_size = 18) + ggtitle("Time-course of selected species") + ylab("#") + xlab("Time (s)") + theme(panel.grid=element_line(linetype="dashed", color="light grey", size=0.2), axis.ticks.length=unit(-0.15, "cm"), axis.text.x = element_text(margin=unit(c(0.25,0.25,0.25,0.25),"cm")), axis.text.y = element_text(margin=unit(c(0.25,0.25,0.25,0.25),"cm")) )
+      plot <- ggplot(melted, aes(x=Time, y=Number, group=Species, color= Species)) + geom_line(size = 1) + theme_classic(base_size = 18) + ggtitle("Time-course of selected species") + ylab("#") + xlab("Time (s)") + theme_pm()
       print(plot)
     }
     else{
