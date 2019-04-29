@@ -44,6 +44,7 @@ server <- function(input, output, session) {
     inputFile$parameters <- CoRC::getParameters(model=inputFile$modelData)
     inputFile$stoichiometry <- CoRC::getStoichiometryMatrix(model=inputFile$modelData)
     inputFile$linkMatrix <- CoRC::getLinkMatrix(model=inputFile$modelData)
+    inputFile$rootnode= xmlTreeParse(input$datafile$datapath)
   })
   
   modelData <- function(){
@@ -67,6 +68,69 @@ server <- function(input, output, session) {
         axis.text.x = element_text(margin=unit(c(0.25,0.25,0.25,0.25),"cm")),
         axis.text.y = element_text(margin=unit(c(0.25,0.25,0.25,0.25),"cm"))
       )
+  }
+  
+  paramListPE <- function () {
+    if (is.null(input$datafile))
+      return()
+    xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[4]])
+    numParameters= xmlSize(xmlList)
+    if (numParameters < 1)
+      return()
+    resTable <- setNames(data.frame(matrix(ncol = 4, nrow = numParameters)), c("LowerBound", "Parameter", "UpperBound","StartValue"))
+    
+    for (i in 1:numParameters){
+      xmlListIN <- xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[4]][[i]])
+      for (j in 1:xmlSize(xmlListIN)){
+        checkParam = names(xmlListIN) == "Parameter"
+        if (checkParam[j]){
+          paramValue= xmlToList(xmlListIN[[j]])
+          if (paramValue[[1]] == "LowerBound"){
+            resTable$LowerBound[i] = paramValue[[3]]
+          }
+          else if (paramValue[[1]]== "ObjectCN"){
+            resTable$Parameter[i] = gsub(",Reference=",".",gsub(".*Vector=","",paramValue[[3]]))
+          }
+          else if (paramValue[[1]]== "UpperBound"){
+            resTable$UpperBound[i] = paramValue[[3]]
+          }
+          else if (paramValue[[1]]== "StartValue"){
+            resTable$StartValue[i] = paramValue[[3]]
+          }
+        }
+      }
+    }
+    return(resTable)
+  }
+  
+  constrListPE <- function () {
+    if (is.null(input$datafile))
+      return()
+    xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[5]])
+    numParameters= xmlSize(xmlList)
+    if (numParameters < 1)
+      return()
+    resTable <- setNames(data.frame(matrix(ncol = 4, nrow = numParameters)), c("LowerBound", "Parameter", "UpperBound"))
+    
+    for (i in 1:numParameters){
+      xmlListIN <- xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[5]][[i]])
+      for (j in 1:xmlSize(xmlListIN)){
+        checkParam = names(xmlListIN) == "Parameter"
+        if (checkParam[j]){
+          paramValue= xmlToList(xmlListIN[[j]])
+          if (paramValue[[1]] == "LowerBound"){
+            resTable$LowerBound[i] = paramValue[[3]]
+          }
+          else if (paramValue[[1]]== "ObjectCN"){
+            resTable$Parameter[i] = gsub(",Reference=",".",gsub(".*Vector=","",paramValue[[3]]))
+          }
+          else if (paramValue[[1]]== "UpperBound"){
+            resTable$UpperBound[i] = paramValue[[3]]
+          }
+        }
+      }
+    }
+    return(resTable)
   }
   
 
@@ -203,6 +267,16 @@ server <- function(input, output, session) {
     colnames(data) <- colNames
     return(as.datatable(data,options = list(scrollX = TRUE, scrollY = "400px")))
   })
+  
+  output$tableParameterListPE <- DT::renderDataTable({
+    data = paramListPE()
+    if (!is.null(data)) return(data)
+  },options = list(scrollX = TRUE, scrollY = "400px"))
+  
+  output$tableConstraintListPE <- DT::renderDataTable({
+    data = constrListPE()
+    if (!is.null(data)) return(data)
+  },options = list(scrollX = TRUE, scrollY = "400px"))
   
   output$tableModel <- DT::renderDataTable({
     selectedTask <- selection()
@@ -432,6 +506,21 @@ server <- function(input, output, session) {
       output[[2]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
       output[[3]] = downloadButton("downloadData", "Download Results")
     }
+    else if (selectedTask == "Optimization"){
+      output[[1]] = textOutput("expressionOpt",inline = F)
+      output[[2]] = selectInput("subtaskSelectionOpt", "Selected subtask:", choices = c('Deterministic (LSODA)'='1'),selected = '1')
+      output[[3]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
+      output[[4]] = downloadButton("downloadData", "Download Results")
+    }
+    else if (selectedTask == "Parameter Estimation"){
+      output[[1]] = tabsetPanel(id = "PE"
+                                ,tabPanel("Parameters", DT::dataTableOutput("tableParameterListPE"))
+                                ,tabPanel("Constraints", DT::dataTableOutput("tableConstraintListPE"))
+      )
+      output[[2]] = selectInput("methodSelectionOpt", "Selected Method:", choices = c('Deterministic (LSODA)'='1'),selected = '1')
+      output[[3]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
+      output[[4]] = downloadButton("downloadData", "Download Results")
+    }
     else if (selectedTask == "Linear Noise Approximation"){
       output[[1]] = checkboxInput("lnaSelection","perform Steady State Analysis",value = T)
       output[[2]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
@@ -454,7 +543,9 @@ server <- function(input, output, session) {
                                ,'Stoichiometric Analysis'= structure(list('Mass Conservation'= structure('1',sticon='')),sticon='')
                                ,'Time Course'= structure('2',sticon='')
                                ,'Metabolic Control Analysis'= structure('3',sticon='')
-                               ,'Linear Noise Approximation'= structure('4',sticon=''))
+                               ,'Optimization'= structure('4',sticon='')
+                               ,'Parameter Estimation'= structure('5',sticon='')
+                               ,'Linear Noise Approximation'= structure('6',sticon=''))
                           , sticon='')
       )
     #attr(sss[[1]],"stopened")=TRUE 
