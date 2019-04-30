@@ -26,9 +26,9 @@ ui <- fluidPage(list(tags$head(HTML('<link rel="icon", href="COPASI-logo.png", t
   sidebarLayout(
     sidebarPanel(
       div(style="height: 70px;",fileInput("datafile", "Load a model file:",
-                accept = c(".xml",".sbml",".cps"),
-                buttonLabel = "Load..."
-                )
+                                          multiple = TRUE,
+                                          accept = c(".xml",".sbml",".cps",".txt"),
+                                          buttonLabel = "Load...")
           ),
       h6("Model files (.cps or SBML) that are less than 30 MB can only be loaded. For larger models, please use stand-alone program of COPASI."),
       tags$hr(),
@@ -38,6 +38,7 @@ ui <- fluidPage(list(tags$head(HTML('<link rel="icon", href="COPASI-logo.png", t
     ),
   mainPanel(tags$style(type='text/css', '#errorOut {background-color: rgba(255,255,0,0.40); color: red;}'),
             verbatimTextOutput("errorOut"),
+            htmlOutput("modelInfo"),
             uiOutput("choose_options",inline = T),
             tags$hr(),
             uiOutput("choose_columns",inline = T),

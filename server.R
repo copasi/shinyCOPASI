@@ -15,6 +15,8 @@ server <- function(input, output, session) {
   error <- renderText({
     if (is.null(input$datafile$datapath))
       error <- c("No model file loaded !!")
+    else if (is.null(inputFile$modelData))
+      error <- c("Please load a valid model file!!")
     else if (exists("message", where=resTask()))
       error <- c(resTask()$message)
     else
@@ -29,13 +31,32 @@ server <- function(input, output, session) {
     return(error())
   })
   
-  
+  ## To store the information of input model
   inputFile <- reactiveValues()
   observe({
     if (is.null(input$datafile))
       return()
-    inputFile$fileName <- basename(input$datafile$datapath)
-    inputFile$modelData <- modelData()
+
+    inputFile$fileNames <- input$datafile$name
+    inputFile$dirName <- dirname(input$datafile$datapath)
+    inputFile$modelData <- NULL
+    for (i in 1:length(input$datafile$name)){
+      inputFileName <- input$datafile$name[i]
+      if (grepl("\\.cps$",inputFileName)){
+        inputFile$modelData <- CoRC::loadModel(input$datafile$datapath[i])
+        inputFile$modelName <- inputFileName
+        inputFile$rootnode <- xmlTreeParse(input$datafile$datapath[i])
+      }
+      else if (grepl("\\.xml$", inputFileName)){
+        inputFile$modelData <- CoRC::loadSBML(input$datafile$datapath[i])
+        inputFile$modelName <- inputFileName
+      }
+    }
+    
+    if (is.null(inputFile$modelData)){
+      return(error())
+    }
+
     inputFile$compartments <- CoRC::getCompartments(model=inputFile$modelData)
     inputFile$species <- CoRC::getSpecies(model=inputFile$modelData)
     inputFile$reactions <- CoRC::getReactions(model=inputFile$modelData)
@@ -44,22 +65,11 @@ server <- function(input, output, session) {
     inputFile$parameters <- CoRC::getParameters(model=inputFile$modelData)
     inputFile$stoichiometry <- CoRC::getStoichiometryMatrix(model=inputFile$modelData)
     inputFile$linkMatrix <- CoRC::getLinkMatrix(model=inputFile$modelData)
-    inputFile$rootnode= xmlTreeParse(input$datafile$datapath)
+    inputFile$settingsPE <- CoRC::getParameterEstimationSettings(model=inputFile$modelData)
   })
   
-  modelData <- function(){
-    inputFile <- basename(input$datafile$datapath)
-    #validate(need(grepl("\\.cps$",inputFile)|| grepl("\\.xml$", inputFile) , "Only .cps or .xml files are supported"))
-    if (grepl("\\.cps$",inputFile))
-      modelData <- CoRC::loadModel(input$datafile$datapath)
-    else if (grepl("\\.xml$", inputFile))
-      modelData <- CoRC::loadSBML(input$datafile$datapath)
-    else{
-      modelData <- NULL
-    }
-    return(modelData)
-  }
   
+  ## Theme functions for the plots
   theme_pm <- function () {
     theme_bw(base_size=12) + #base_family="Arial Black"
       theme(
@@ -70,15 +80,72 @@ server <- function(input, output, session) {
       )
   }
   
+  output$modelInfo <- renderText({
+    if (is.null(input$datafile) || is.null(inputFile$modelData))
+      return()
+    selectedTask = selection()
+    if (selectedTask %in% c("Steady State", "Time Course", "Metabolic Control Analysis","Optimization","Parameter Estimation", "Linear Noise Approximation") ){
+      if (selectedTask == "Parameter Estimation" ){
+        expfileName= ""
+        valfileName= ""
+        if (xmlSize(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[9]]) >= 1){
+          xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[9]][[1]])
+          for (i in 1:xmlSize(xmlList)){
+            paramValue= xmlToList(xmlList[[i]])
+            if (paramValue[[1]] == "File Name"){
+              expfileName= paramValue[[3]]
+              break
+            }
+          }
+          if (expfileName %in% inputFile$fileNames){
+            file.copy(input$datafile$datapath[inputFile$fileNames == expfileName], paste0(inputFile$dirName,"/",expfileName), overwrite = TRUE, recursive = FALSE,copy.mode = TRUE, copy.date = FALSE)
+          }
+          else
+            expfileName= paste(expfileName," <font color=\"red\"> ------NOT PROPERLY LOADED!------ </font> ")
+        }
+          
+        if (xmlSize(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[10]]) > 2){
+          xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[10]][[1]])
+          for (i in 1:xmlSize(xmlList)){
+            paramValue= xmlToList(xmlList[[i]])
+            if (paramValue[[1]] == "File Name"){
+              valfileName= paramValue[[3]]
+              break
+            }
+          }
+          if (valfileName %in% inputFile$fileNames){
+            file.copy(input$datafile$datapath[inputFile$fileNames == valfileName], paste0(inputFile$dirName,"/",valfileName), overwrite = TRUE, recursive = FALSE,copy.mode = TRUE, copy.date = FALSE)
+          }
+          else
+            valfileName= paste(valfileName," <font color=\"red\"> ------NOT PROPERLY LOADED!------ </font> ")
+        }
+        
+        return(paste("<h2>",selectedTask,"</h2> \b", "<table style=\"width:100%\"><tr><th>Experimental Data:</th><th>Validation Data:</th></tr><tr><td>",expfileName,"</td><td>",valfileName, "</td></tr></table> \b"))
+      }
+      else
+        return(paste("<h2>",selectedTask,"</h2> \b"))
+    }
+  })
+  
+  output$methodSelectionPE <- renderText({
+    if (is.null(input$datafile) || is.null(inputFile$modelData))
+      return()
+    namesPE= toupper(names(inputFile$settingsPE$method))
+    strOut= ""
+    for (i in 1:length(namesPE)){
+      strOut= paste(strOut, "<b>",namesPE[[i]],"</b>:&nbsp ", inputFile$settingsPE$method[[i]], "<br>")
+    }
+    return(paste(strOut,"<br>"))
+  })
+    
   paramListPE <- function () {
-    if (is.null(input$datafile))
+    if (is.null(input$datafile)|| is.null(inputFile$modelData))
       return()
     xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[4]])
     numParameters= xmlSize(xmlList)
     if (numParameters < 1)
       return()
     resTable <- setNames(data.frame(matrix(ncol = 4, nrow = numParameters)), c("LowerBound", "Parameter", "UpperBound","StartValue"))
-    
     for (i in 1:numParameters){
       xmlListIN <- xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[4]][[i]])
       for (j in 1:xmlSize(xmlListIN)){
@@ -104,13 +171,13 @@ server <- function(input, output, session) {
   }
   
   constrListPE <- function () {
-    if (is.null(input$datafile))
+    if (is.null(input$datafile)|| is.null(inputFile$modelData))
       return()
     xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[5]])
     numParameters= xmlSize(xmlList)
     if (numParameters < 1)
       return()
-    resTable <- setNames(data.frame(matrix(ncol = 4, nrow = numParameters)), c("LowerBound", "Parameter", "UpperBound"))
+    resTable <- setNames(data.frame(matrix(ncol = 3, nrow = numParameters)), c("LowerBound", "Parameter", "UpperBound"))
     
     for (i in 1:numParameters){
       xmlListIN <- xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[5]][[i]])
@@ -139,6 +206,13 @@ server <- function(input, output, session) {
     modelData <- inputFile$modelData
     selectedTask <- selection()
     
+    # Create a Progress object
+    progress <- shiny::Progress$new()
+    # Make sure it closes when we exit this reactive, even if there's an error
+    on.exit(progress$close())
+    progress$set(message = paste("Running ", selectedTask), value = 0)
+    
+    
     if (selectedTask == "Steady State"){
       res <- tryCatch(CoRC::runSS(calculate_jacobian = input$calculateJacobian,perform_stability_analysis =input$calculateJacobian,model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
       resTask <- res
@@ -147,12 +221,6 @@ server <- function(input, output, session) {
       
     }
     else if (selectedTask == "Time Course"){
-      # Create a Progress object
-      progress <- shiny::Progress$new()
-      # Make sure it closes when we exit this reactive, even if there's an error
-      on.exit(progress$close())
-      progress$set(message = "Running Time course analysis", value = 0)
-      
       if (input$timeCourseSelection == 1)
         res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="deterministic",model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
       else if (input$timeCourseSelection == 2)
@@ -163,6 +231,10 @@ server <- function(input, output, session) {
     }
     else if(selectedTask == "Metabolic Control Analysis"){
       res <- tryCatch(CoRC::runMCA(perform_steady_state_analysis = input$mcaSelection, model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
+      resTask <- res
+    }
+    else if (selectedTask == "Parameter Estimation"){
+      res <- tryCatch(CoRC::runParameterEstimation(model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
       resTask <- res
     }
     else if (selectedTask == "Linear Noise Approximation"){
@@ -182,7 +254,7 @@ server <- function(input, output, session) {
     filename = function() { 
       if (is.null(input$datafile$datapath))
         return(NULL)
-      paste(sub("\\..*$", '',basename(input$datafile$datapath)) , '.csv', sep='')
+      paste(sub("\\..*$", '',inputFile$modelName) , '.csv', sep='')
       },
     content = function(file) {
       if (is.null(file) || error() != "" || is.null(resTask()))
@@ -195,8 +267,8 @@ server <- function(input, output, session) {
       else if (selectedTask == "Stoichiometric Analysis"){
         
       }
-      else if (selectedTask == "Time Course"){
-        writeData <- resTask()[, c("Time",input$columns), drop = FALSE]
+      else if (selectedTask == "Time Course" && "Time" %in% names(resTask()$result) && !is.null(input$columns)){
+        writeData <- resTask()$result[, c("Time",input$columns), drop = FALSE]
       }
       else if(selectedTask == "Metabolic Control Analysis"){
         writeData <- resTask()$elasticities_unscaled
@@ -225,6 +297,10 @@ server <- function(input, output, session) {
     else if(selectedTask == "Metabolic Control Analysis"){
       data <- resTask()$elasticities_unscaled
     }
+    else if(selectedTask == "Parameter Estimation"){
+      data <- t(as.data.frame(resTask()$main))
+      colnames(data) <- c("Value")  
+    }
     else if(selectedTask == "Linear Noise Approximation"){
       data <- resTask()$covariance_matrix
     }
@@ -235,6 +311,13 @@ server <- function(input, output, session) {
   },options = list(scrollX = TRUE, scrollY = "400px"))
   
 
+  output$tablePEfit <- DT::renderDataTable({
+    if (error() != "" || is.null(resTask()))
+      return(NULL)
+    data <- resTask()$parameter
+    return(data)
+  },options = list(scrollX = TRUE, scrollY = "400px"))
+  
   output$tableSS <- DT::renderDataTable({
     if (error() != "" || is.null(resTask()))
       return(NULL)
@@ -271,12 +354,12 @@ server <- function(input, output, session) {
   output$tableParameterListPE <- DT::renderDataTable({
     data = paramListPE()
     if (!is.null(data)) return(data)
-  },options = list(scrollX = TRUE, scrollY = "400px"))
+  },options = list(scrollX = TRUE, scrollY = "200px"))
   
   output$tableConstraintListPE <- DT::renderDataTable({
     data = constrListPE()
     if (!is.null(data)) return(data)
-  },options = list(scrollX = TRUE, scrollY = "400px"))
+  },options = list(scrollX = TRUE, scrollY = "200px"))
   
   output$tableModel <- DT::renderDataTable({
     selectedTask <- selection()
@@ -401,6 +484,13 @@ server <- function(input, output, session) {
     else if(selectedTask == "Metabolic Control Analysis"){
       tabPanel("Table",DT::dataTableOutput("tableResults"))
     }
+    else if(selectedTask == "Parameter Estimation"){
+      tabsetPanel(id = "PE"
+                  ,tabPanel("Main",DT::dataTableOutput("tableResults"))
+                  ,tabPanel("Fit results",DT::dataTableOutput("tablePEfit"))
+                  #,tabPanel("Plot", plotOutput("plot"))
+      )
+    }
     else if(selectedTask == "Linear Noise Approximation"){
       tabPanel("Table",DT::dataTableOutput("tableResults"))
     }
@@ -507,17 +597,15 @@ server <- function(input, output, session) {
       output[[3]] = downloadButton("downloadData", "Download Results")
     }
     else if (selectedTask == "Optimization"){
-      output[[1]] = textOutput("expressionOpt",inline = F)
-      output[[2]] = selectInput("subtaskSelectionOpt", "Selected subtask:", choices = c('Deterministic (LSODA)'='1'),selected = '1')
-      output[[3]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
-      output[[4]] = downloadButton("downloadData", "Download Results")
+      output[[1]] = selectInput("subtaskSelectionOpt", "Selected subtask:", choices = c('Deterministic (LSODA)'='1'),selected = '1')
+      output[[2]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
+      output[[3]] = downloadButton("downloadData", "Download Results")
     }
     else if (selectedTask == "Parameter Estimation"){
       output[[1]] = tabsetPanel(id = "PE"
                                 ,tabPanel("Parameters", DT::dataTableOutput("tableParameterListPE"))
-                                ,tabPanel("Constraints", DT::dataTableOutput("tableConstraintListPE"))
-      )
-      output[[2]] = selectInput("methodSelectionOpt", "Selected Method:", choices = c('Deterministic (LSODA)'='1'),selected = '1')
+                                ,tabPanel("Constraints", DT::dataTableOutput("tableConstraintListPE")) )
+      output[[2]] = htmlOutput("methodSelectionPE")
       output[[3]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
       output[[4]] = downloadButton("downloadData", "Download Results")
     }
