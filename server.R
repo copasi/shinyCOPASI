@@ -310,14 +310,7 @@ server <- function(input, output, session) {
     return(data)
   },options = list(scrollX = TRUE, scrollY = "400px"))
   
-
-  output$tablePEfit <- DT::renderDataTable({
-    if (error() != "" || is.null(resTask()))
-      return(NULL)
-    data <- resTask()$parameter
-    return(data)
-  },options = list(scrollX = TRUE, scrollY = "400px"))
-  
+  ## Output task-specific results
   output$tableSS <- DT::renderDataTable({
     if (error() != "" || is.null(resTask()))
       return(NULL)

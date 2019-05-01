@@ -10,6 +10,7 @@
 # install.packages("ggplot2")
 # install.packages("DT")
 # install.packages("markdown")
+# install.packages("XML")
 
 library(devtools)
 library(reshape2)
@@ -17,6 +18,7 @@ library(ggplot2)
 library(shinyTree)
 library(markdown)
 library(formattable)
+library(XML)
 
 ui <- fluidPage(list(tags$head(HTML('<link rel="icon", href="COPASI-logo.png", type="image/png" />'))),
   div(style="padding: 1px 0px; width: '100%'",
@@ -31,6 +33,7 @@ ui <- fluidPage(list(tags$head(HTML('<link rel="icon", href="COPASI-logo.png", t
                                           buttonLabel = "Load...")
           ),
       h6("Model files (.cps or SBML) that are less than 30 MB can only be loaded. For larger models, please use stand-alone program of COPASI."),
+      h6("If the model has a data file, load it along with your model file using multiple selection."),
       tags$hr(),
       tags$strong(style = "font-size: 15px;",'COPASI:'),
       shinyTree("taskSelection"),
