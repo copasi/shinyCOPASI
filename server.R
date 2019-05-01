@@ -128,7 +128,7 @@ server <- function(input, output, session) {
   })
   
   output$methodSelectionPE <- renderText({
-    if (is.null(input$datafile) || is.null(inputFile$modelData))
+    if (is.null(input$datafile) || is.null(inputFile$rootnode))
       return()
     namesPE= toupper(names(inputFile$settingsPE$method))
     strOut= ""
@@ -139,7 +139,7 @@ server <- function(input, output, session) {
   })
     
   paramListPE <- function () {
-    if (is.null(input$datafile)|| is.null(inputFile$modelData))
+    if (is.null(input$datafile)|| is.null(inputFile$rootnode))
       return()
     xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[4]])
     numParameters= xmlSize(xmlList)
@@ -171,7 +171,7 @@ server <- function(input, output, session) {
   }
   
   constrListPE <- function () {
-    if (is.null(input$datafile)|| is.null(inputFile$modelData))
+    if (is.null(input$datafile)|| is.null(inputFile$rootnode))
       return()
     xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[5]])
     numParameters= xmlSize(xmlList)
@@ -344,6 +344,22 @@ server <- function(input, output, session) {
     return(as.datatable(data,options = list(scrollX = TRUE, scrollY = "400px")))
   })
   
+  output$tablePEfit <- DT::renderDataTable({
+    if (error() != "" || is.null(resTask()))
+      return(NULL)
+    data <- resTask()$parameter
+    return(data)
+  },options = list(scrollX = TRUE, scrollY = "400px"))
+  
+  output$tablePEexp <- DT::renderDataTable({
+    if (error() != "" || is.null(resTask()))
+      return(NULL)
+    data <- resTask()$experiments
+    return(data)
+  },options = list(scrollX = TRUE, scrollY = "400px"))
+  
+  
+  ## Display the selected parameters and constraints 
   output$tableParameterListPE <- DT::renderDataTable({
     data = paramListPE()
     if (!is.null(data)) return(data)
@@ -354,6 +370,7 @@ server <- function(input, output, session) {
     if (!is.null(data)) return(data)
   },options = list(scrollX = TRUE, scrollY = "200px"))
   
+  ## Display information of the loaded model
   output$tableModel <- DT::renderDataTable({
     selectedTask <- selection()
     if (selectedTask == "Compartments"){
@@ -481,7 +498,7 @@ server <- function(input, output, session) {
       tabsetPanel(id = "PE"
                   ,tabPanel("Main",DT::dataTableOutput("tableResults"))
                   ,tabPanel("Fit results",DT::dataTableOutput("tablePEfit"))
-                  #,tabPanel("Plot", plotOutput("plot"))
+                  ,tabPanel("Experiments", DT::dataTableOutput("tablePEexp"))
       )
     }
     else if(selectedTask == "Linear Noise Approximation"){
@@ -590,9 +607,12 @@ server <- function(input, output, session) {
       output[[3]] = downloadButton("downloadData", "Download Results")
     }
     else if (selectedTask == "Optimization"){
-      output[[1]] = selectInput("subtaskSelectionOpt", "Selected subtask:", choices = c('Deterministic (LSODA)'='1'),selected = '1')
-      output[[2]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
-      output[[3]] = downloadButton("downloadData", "Download Results")
+      output[[1]] = tabsetPanel(id = "PE"
+                                ,tabPanel("Parameters", DT::dataTableOutput("tableParameterListPE"))
+                                ,tabPanel("Constraints", DT::dataTableOutput("tableConstraintListPE")) )
+      output[[2]] = htmlOutput("methodSelectionPE")
+      output[[3]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
+      output[[4]] = downloadButton("downloadData", "Download Results")
     }
     else if (selectedTask == "Parameter Estimation"){
       output[[1]] = tabsetPanel(id = "PE"
