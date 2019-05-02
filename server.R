@@ -40,6 +40,7 @@ server <- function(input, output, session) {
     inputFile$fileNames <- input$datafile$name
     inputFile$dirName <- dirname(input$datafile$datapath)
     inputFile$modelData <- NULL
+    inputFile$rootnode <- NULL
     inputFile$modelLoaded <- FALSE
     for (i in 1:length(input$datafile$name)){
       inputFileName <- input$datafile$name[i]
@@ -110,7 +111,7 @@ server <- function(input, output, session) {
             file.copy(input$datafile$datapath[inputFile$fileNames == expfileName], paste0(inputFile$dirName,"/",expfileName), overwrite = TRUE, recursive = FALSE,copy.mode = TRUE, copy.date = FALSE)
           }
           else
-            expfileName= paste(expfileName," <font color=\"red\"> ------NOT PROPERLY LOADED!------ </font> ")
+            expfileName= paste(" <font color=\"red\">  Please load a valid data file along with the model. File name: <b>", expfileName ,"</b> </font> ")
         }
           
         if (xmlSize(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[10]]) > 2){
@@ -126,7 +127,7 @@ server <- function(input, output, session) {
             file.copy(input$datafile$datapath[inputFile$fileNames == valfileName], paste0(inputFile$dirName,"/",valfileName), overwrite = TRUE, recursive = FALSE,copy.mode = TRUE, copy.date = FALSE)
           }
           else
-            valfileName= paste(valfileName," <font color=\"red\"> ------NOT PROPERLY LOADED!------ </font> ")
+            valfileName= paste(" <font color=\"red\">  Please load a valid data file along with the model. File name: <b>", valfileName ,"</b> </font> ")
         }
         
         #return(paste("<h2>",selectedTask,"</h2> ", "<table style=\"width:100%\"><tr><th>Experimental Data:</th><th>Validation Data:</th></tr><tr><td>",expfileName,"</td><td>",valfileName, "</td></tr></table> <br>"))
@@ -402,6 +403,8 @@ server <- function(input, output, session) {
   })
   
   output$tableLM <- DT::renderDataTable({
+    if (is.null(input$datafile) || is.null(inputFile$modelData))
+      return()
     colNames <- colnames(inputFile$linkMatrix)
     data <- data.frame(inputFile$linkMatrix)
     data <- formattable(data, list(area(col = colnames(data)) ~ color_tile("lightpink", "lightgreen")))
@@ -410,6 +413,8 @@ server <- function(input, output, session) {
   })
   
   output$tableStoich <- DT::renderDataTable({
+    if (is.null(input$datafile) || is.null(inputFile$modelData))
+      return()
     colNames <- colnames(inputFile$stoichiometry)
     data <- data.frame(inputFile$stoichiometry)
     data <- formattable(data, list(area(col = colnames(data)) ~ color_tile("lightpink", "lightgreen")))
@@ -445,6 +450,8 @@ server <- function(input, output, session) {
   
   ## Display information of the loaded model
   output$tableModel <- DT::renderDataTable({
+    if (is.null(input$datafile) || is.null(inputFile$modelData))
+      return()
     selectedTask <- selection()
     if (selectedTask == "Compartments"){
       tableCompartments <- inputFile$compartments
