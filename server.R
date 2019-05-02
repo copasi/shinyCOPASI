@@ -308,6 +308,10 @@ server <- function(input, output, session) {
       res <- tryCatch(CoRC::runMCA(perform_steady_state_analysis = input$mcaSelection, model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
       resTask <- res
     }
+    else if (selectedTask == "Optimization"){
+      res <- tryCatch(CoRC::runOptimization(model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
+      resTask <- res
+    }
     else if (selectedTask == "Parameter Estimation"){
       res <- tryCatch(CoRC::runParameterEstimation(model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
       resTask <- res
@@ -371,7 +375,7 @@ server <- function(input, output, session) {
     else if(selectedTask == "Metabolic Control Analysis"){
       data <- resTask()$elasticities_unscaled
     }
-    else if(selectedTask == "Parameter Estimation"){
+    else if(selectedTask %in% c("Optimization","Parameter Estimation")){
       data <- t(as.data.frame(resTask()$main))
       colnames(data) <- c("Value")  
     }
@@ -425,8 +429,13 @@ server <- function(input, output, session) {
   output$tablePEfit <- DT::renderDataTable({
     if (error() != "" || is.null(resTask()))
       return(NULL)
-    data <- resTask()$parameter
-    return(data)
+    selectedTask <- selection()
+    if(selectedTask == "Optimization"){
+      return(resTask()$parameters)
+    }
+    else if(selectedTask == "Parameter Estimation"){
+      return(resTask()$parameter)
+    }
   },options = list(scrollX = TRUE, scrollY = "400px"))
   
   output$tablePEexp <- DT::renderDataTable({
@@ -574,10 +583,16 @@ server <- function(input, output, session) {
     else if(selectedTask == "Metabolic Control Analysis"){
       tabPanel("Table",DT::dataTableOutput("tableResults"))
     }
+    else if(selectedTask == "Optimization"){
+      tabsetPanel(id = "PE"
+                  ,tabPanel("Main",DT::dataTableOutput("tableResults"))
+                  ,tabPanel("Optimized Parameters",DT::dataTableOutput("tablePEfit"))
+      )
+    }
     else if(selectedTask == "Parameter Estimation"){
       tabsetPanel(id = "PE"
                   ,tabPanel("Main",DT::dataTableOutput("tableResults"))
-                  ,tabPanel("Fit results",DT::dataTableOutput("tablePEfit"))
+                  ,tabPanel("Fitted Parameters",DT::dataTableOutput("tablePEfit"))
                   ,tabPanel("Experiments", DT::dataTableOutput("tablePEexp"))
       )
     }
