@@ -40,12 +40,15 @@ server <- function(input, output, session) {
     inputFile$fileNames <- input$datafile$name
     inputFile$dirName <- dirname(input$datafile$datapath)
     inputFile$modelData <- NULL
+    inputFile$modelLoaded <- FALSE
     for (i in 1:length(input$datafile$name)){
       inputFileName <- input$datafile$name[i]
       if (grepl("\\.cps$",inputFileName)){
         inputFile$modelData <- CoRC::loadModel(input$datafile$datapath[i])
         inputFile$modelName <- inputFileName
         inputFile$rootnode <- xmlTreeParse(input$datafile$datapath[i])
+        inputFile$modelAttrs <- xmlAttrs(inputFile$rootnode$doc$children$COPASI[[2]])
+        inputFile$modelLoaded <- TRUE
       }
       else if (grepl("\\.xml$", inputFileName)){
         inputFile$modelData <- CoRC::loadSBML(input$datafile$datapath[i])
@@ -65,7 +68,13 @@ server <- function(input, output, session) {
     inputFile$parameters <- CoRC::getParameters(model=inputFile$modelData)
     inputFile$stoichiometry <- CoRC::getStoichiometryMatrix(model=inputFile$modelData)
     inputFile$linkMatrix <- CoRC::getLinkMatrix(model=inputFile$modelData)
+    inputFile$settingsOpt <- CoRC::getOptimizationSettings(model=inputFile$modelData)
     inputFile$settingsPE <- CoRC::getParameterEstimationSettings(model=inputFile$modelData)
+    inputFile$taskList <- c("Compartments", "Species", "Reactions"
+                            ,"Global Quantities", "Events", "Parameters"
+                            ,"Steady State", "Stoichiometric Analysis","Mass Conservation"
+                            ,"Time Course", "Metabolic Control Analysis","Optimization"
+                            ,"Parameter Estimation", "Linear Noise Approximation")
   })
   
   
@@ -84,7 +93,7 @@ server <- function(input, output, session) {
     if (is.null(input$datafile) || is.null(inputFile$modelData))
       return()
     selectedTask = selection()
-    if (selectedTask %in% c("Steady State", "Time Course", "Metabolic Control Analysis","Optimization","Parameter Estimation", "Linear Noise Approximation") ){
+    if (selectedTask %in% inputFile$taskList ){
       if (selectedTask == "Parameter Estimation" ){
         expfileName= ""
         valfileName= ""
@@ -120,34 +129,87 @@ server <- function(input, output, session) {
             valfileName= paste(valfileName," <font color=\"red\"> ------NOT PROPERLY LOADED!------ </font> ")
         }
         
-        return(paste("<h2>",selectedTask,"</h2> \b", "<table style=\"width:100%\"><tr><th>Experimental Data:</th><th>Validation Data:</th></tr><tr><td>",expfileName,"</td><td>",valfileName, "</td></tr></table> \b"))
+        #return(paste("<h2>",selectedTask,"</h2> ", "<table style=\"width:100%\"><tr><th>Experimental Data:</th><th>Validation Data:</th></tr><tr><td>",expfileName,"</td><td>",valfileName, "</td></tr></table> <br>"))
+        strOut= paste("<h2>",selectedTask,"</h2>")
+        strOut= paste(strOut, "<pre><b> Experimental Data: </b>",expfileName,"<br> <br>")
+        strOut= paste(strOut, "<b>Validation Data: </b>",valfileName,"<br>")
+        strOut= paste(strOut, "<pre><b> Randomize Start Values: </b>",inputFile$settingsPE$randomize_start_values)
+        strOut= paste(strOut, "<b>  Calculate Statistics: </b>",inputFile$settingsPE$calculate_statistics, "</pre></pre>")
+        return(strOut)
+        
+      }
+      else if (selectedTask == "Optimization" ){
+        strOut= paste("<h2>",selectedTask,"</h2>")
+        strOut= paste(strOut, "<pre><b> Expression: </b>",inputFile$settingsOpt$expression)
+        strOut= paste(strOut, "<pre><b> Maxmize: </b>",inputFile$settingsOpt$maximize, "</pre>")
+        strOut= paste(strOut, "<b>Subtask: </b>",inputFile$settingsOpt$subtask)
+        strOut= paste(strOut, "<pre><b> Randomize Start Values: </b>",inputFile$settingsOpt$randomize_start_values)
+        strOut= paste(strOut, "<b>  Calculate Statistics: </b>",inputFile$settingsOpt$calculate_statistics, "</pre></pre>")
+        return(strOut)
       }
       else
-        return(paste("<h2>",selectedTask,"</h2> \b"))
+        return(paste("<h2>",selectedTask,"</h2>"))
+    }
+    else if (selectedTask == "Model" || inputFile$modelLoaded == T){
+      #strOut= paste("<h2>",selectedTask,"</h2>")
+      strOut= paste("<pre><b> Model: </b>",inputFile$modelAttrs[[2]],"<br>")
+      strOut= paste(strOut,"<pre><table style=\"width:50%\"><tr><th>Time Unit:</th><td>",inputFile$modelAttrs[[4]]
+                    ,"</td><th>Volume Unit:</th><td>",inputFile$modelAttrs[[5]],"</td></tr>")
+      strOut= paste(strOut,"<tr><th>Quantity Unit:</th><td>",inputFile$modelAttrs[[8]]
+                    ,"</td><th>Area Unit:</th><td>",inputFile$modelAttrs[[6]],"</td></tr>")
+      strOut= paste(strOut,"<tr><th>Avogadro Constant:</th><td>",inputFile$modelAttrs[[10]]
+                    ,"</td><th>Length Unit:</th><td>",inputFile$modelAttrs[[7]],"</td></tr></table></pre></pre>")
+      
+      return(strOut)
     }
   })
   
-  output$methodSelectionPE <- renderText({
+  output$selectedMethod<- renderText({
     if (is.null(input$datafile) || is.null(inputFile$rootnode))
       return()
-    namesPE= toupper(names(inputFile$settingsPE$method))
-    strOut= ""
-    for (i in 1:length(namesPE)){
-      strOut= paste(strOut, "<b>",namesPE[[i]],"</b>:&nbsp ", inputFile$settingsPE$method[[i]], "<br>")
+    
+    selectedTask = selection()
+    if (selectedTask == "Parameter Estimation" ){
+      methodSetting= inputFile$settingsPE$method
     }
-    return(paste(strOut,"<br>"))
+    else if(selectedTask == "Optimization" ){
+      methodSetting= inputFile$settingsOpt$method
+    }
+    else{
+      return()
+    }
+  
+    strOut= ""
+    namesMethod= paste0(toupper(substring(names(methodSetting),1,1)),substring(names(methodSetting),2))
+    strOut= paste("<pre><b>",namesMethod[[1]],"</b>:",methodSetting[[1]],"<br><pre>")
+    for (i in 2:length(namesMethod)){
+      strOut= paste(strOut, "<b>",namesMethod[[i]],"</b>:&nbsp ", methodSetting[[i]], "<br>")
+    }
+    return(paste(strOut,"</pre></pre>"))
   })
     
-  paramListPE <- function () {
+  paramList <- function () {
     if (is.null(input$datafile)|| is.null(inputFile$rootnode))
       return()
-    xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[4]])
-    numParameters= xmlSize(xmlList)
+    
+    selectedTask = selection()
+    if (selectedTask == "Parameter Estimation" ){
+      xmlList= inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[4]]
+    }
+    else if(selectedTask == "Optimization" ){
+      xmlList= inputFile$rootnode$doc$children$COPASI[[3]][[5]][[2]][[6]]
+    }
+    else{
+      return()
+    }
+    
+    numParameters= xmlSize(xmlChildren(xmlList))
     if (numParameters < 1)
       return()
+    
     resTable <- setNames(data.frame(matrix(ncol = 4, nrow = numParameters)), c("LowerBound", "Parameter", "UpperBound","StartValue"))
     for (i in 1:numParameters){
-      xmlListIN <- xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[4]][[i]])
+      xmlListIN <- xmlChildren(xmlList[[i]])
       for (j in 1:xmlSize(xmlListIN)){
         checkParam = names(xmlListIN) == "Parameter"
         if (checkParam[j]){
@@ -170,17 +232,29 @@ server <- function(input, output, session) {
     return(resTable)
   }
   
-  constrListPE <- function () {
+  constrList <- function () {
     if (is.null(input$datafile)|| is.null(inputFile$rootnode))
       return()
-    xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[5]])
-    numParameters= xmlSize(xmlList)
+    
+    selectedTask = selection()
+    if (selectedTask == "Parameter Estimation" ){
+      xmlList= inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[5]]
+    }
+    else if(selectedTask == "Optimization" ){
+      xmlList= inputFile$rootnode$doc$children$COPASI[[3]][[5]][[2]][[7]]
+    }
+    else{
+      return()
+    }
+    
+    
+    numParameters= xmlSize(xmlChildren(xmlList))
     if (numParameters < 1)
       return()
     resTable <- setNames(data.frame(matrix(ncol = 3, nrow = numParameters)), c("LowerBound", "Parameter", "UpperBound"))
     
     for (i in 1:numParameters){
-      xmlListIN <- xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[5]][[i]])
+      xmlListIN <- xmlChildren(xmlList[[i]])
       for (j in 1:xmlSize(xmlListIN)){
         checkParam = names(xmlListIN) == "Parameter"
         if (checkParam[j]){
@@ -246,7 +320,6 @@ server <- function(input, output, session) {
     
     return(resTask)
   })
-  
   
 #### To download tables for different tasks ####  
   ## For data download
@@ -360,13 +433,13 @@ server <- function(input, output, session) {
   
   
   ## Display the selected parameters and constraints 
-  output$tableParameterListPE <- DT::renderDataTable({
-    data = paramListPE()
+  output$tableParameterList <- DT::renderDataTable({
+    data = paramList()
     if (!is.null(data)) return(data)
   },options = list(scrollX = TRUE, scrollY = "200px"))
   
-  output$tableConstraintListPE <- DT::renderDataTable({
-    data = constrListPE()
+  output$tableConstraintList <- DT::renderDataTable({
+    data = constrList()
     if (!is.null(data)) return(data)
   },options = list(scrollX = TRUE, scrollY = "200px"))
   
@@ -608,17 +681,17 @@ server <- function(input, output, session) {
     }
     else if (selectedTask == "Optimization"){
       output[[1]] = tabsetPanel(id = "PE"
-                                ,tabPanel("Parameters", DT::dataTableOutput("tableParameterListPE"))
-                                ,tabPanel("Constraints", DT::dataTableOutput("tableConstraintListPE")) )
-      output[[2]] = htmlOutput("methodSelectionPE")
+                                ,tabPanel("Parameters", DT::dataTableOutput("tableParameterList"))
+                                ,tabPanel("Constraints", DT::dataTableOutput("tableConstraintList")) )
+      output[[2]] = htmlOutput("selectedMethod")
       output[[3]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
       output[[4]] = downloadButton("downloadData", "Download Results")
     }
     else if (selectedTask == "Parameter Estimation"){
       output[[1]] = tabsetPanel(id = "PE"
-                                ,tabPanel("Parameters", DT::dataTableOutput("tableParameterListPE"))
-                                ,tabPanel("Constraints", DT::dataTableOutput("tableConstraintListPE")) )
-      output[[2]] = htmlOutput("methodSelectionPE")
+                                ,tabPanel("Parameters", DT::dataTableOutput("tableParameterList"))
+                                ,tabPanel("Constraints", DT::dataTableOutput("tableConstraintList")) )
+      output[[2]] = htmlOutput("selectedMethod")
       output[[3]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
       output[[4]] = downloadButton("downloadData", "Download Results")
     }
