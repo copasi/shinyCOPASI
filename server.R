@@ -48,7 +48,7 @@ server <- function(input, output, session) {
         inputFile$modelData <- CoRC::loadModel(input$datafile$datapath[i])
         inputFile$modelName <- inputFileName
         inputFile$rootnode <- xmlTreeParse(input$datafile$datapath[i])
-        inputFile$modelAttrs <- xmlAttrs(inputFile$rootnode$doc$children$COPASI[[2]])
+        inputFile$modelAttrs <- xmlAttrs(inputFile$rootnode$doc$children$COPASI[names(inputFile$rootnode$doc$children$COPASI)=="Model"]$Model)
         inputFile$modelLoaded <- TRUE
       }
       else if (grepl("\\.xml$", inputFileName)){
@@ -98,8 +98,8 @@ server <- function(input, output, session) {
       if (selectedTask == "Parameter Estimation" ){
         expfileName= ""
         valfileName= ""
-        if (xmlSize(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[9]]) >= 1){
-          xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[9]][[1]])
+        if (xmlSize(inputFile$rootnode$doc$children$COPASI[names(inputFile$rootnode$doc$children$COPASI)=="ListOfTasks"]$ListOfTasks[[6]][[2]][[9]]) >= 1){
+          xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[names(inputFile$rootnode$doc$children$COPASI)=="ListOfTasks"]$ListOfTasks[[6]][[2]][[9]][[1]])
           for (i in 1:xmlSize(xmlList)){
             paramValue= xmlToList(xmlList[[i]])
             if (paramValue[[1]] == "File Name"){
@@ -114,8 +114,8 @@ server <- function(input, output, session) {
             expfileName= paste(" <font color=\"red\">  Please load a valid data file along with the model. File name: <b>", expfileName ,"</b> </font> ")
         }
           
-        if (xmlSize(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[10]]) > 2){
-          xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[10]][[1]])
+        if (xmlSize(inputFile$rootnode$doc$children$COPASI[names(inputFile$rootnode$doc$children$COPASI)=="ListOfTasks"]$ListOfTasks[[6]][[2]][[10]]) > 2){
+          xmlList= xmlChildren(inputFile$rootnode$doc$children$COPASI[names(inputFile$rootnode$doc$children$COPASI)=="ListOfTasks"]$ListOfTasks[[6]][[2]][[10]][[1]])
           for (i in 1:xmlSize(xmlList)){
             paramValue= xmlToList(xmlList[[i]])
             if (paramValue[[1]] == "File Name"){
@@ -195,10 +195,10 @@ server <- function(input, output, session) {
     
     selectedTask = selection()
     if (selectedTask == "Parameter Estimation" ){
-      xmlList= inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[4]]
+      xmlList= inputFile$rootnode$doc$children$COPASI[names(inputFile$rootnode$doc$children$COPASI)=="ListOfTasks"]$ListOfTasks[[6]][[2]][[4]]
     }
     else if(selectedTask == "Optimization" ){
-      xmlList= inputFile$rootnode$doc$children$COPASI[[3]][[5]][[2]][[6]]
+      xmlList= inputFile$rootnode$doc$children$COPASI[names(inputFile$rootnode$doc$children$COPASI)=="ListOfTasks"]$ListOfTasks[[5]][[2]][[6]]
     }
     else{
       return()
@@ -239,10 +239,10 @@ server <- function(input, output, session) {
     
     selectedTask = selection()
     if (selectedTask == "Parameter Estimation" ){
-      xmlList= inputFile$rootnode$doc$children$COPASI[[3]][[6]][[2]][[5]]
+      xmlList= inputFile$rootnode$doc$children$COPASI[names(inputFile$rootnode$doc$children$COPASI)=="ListOfTasks"]$ListOfTasks[[6]][[2]][[5]]
     }
     else if(selectedTask == "Optimization" ){
-      xmlList= inputFile$rootnode$doc$children$COPASI[[3]][[5]][[2]][[7]]
+      xmlList= inputFile$rootnode$doc$children$COPASI[names(inputFile$rootnode$doc$children$COPASI)=="ListOfTasks"]$ListOfTasks[[5]][[2]][[7]]
     }
     else{
       return()
