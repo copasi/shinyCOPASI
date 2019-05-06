@@ -351,6 +351,12 @@ server <- function(input, output, session) {
       else if(selectedTask == "Metabolic Control Analysis"){
         writeData <- resTask()$elasticities_unscaled
       }
+      else  if(selectedTask == "Optimization"){
+        writeData <- resTask()$parameters
+      }
+      else if(selectedTask == "Parameter Estimation"){
+        writeData <- resTask()$parameter
+      }
       else if (selectedTask == "Linear Noise Approximation"){
         writeData <- resTask()$covariance_matrix
       }
