@@ -296,12 +296,7 @@ server <- function(input, output, session) {
       
     }
     else if (selectedTask == "Time Course"){
-      if (input$timeCourseSelection == 1)
-        res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="deterministic",model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
-      else if (input$timeCourseSelection == 2)
-        res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="stochastic",model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) },error = function(error_condition){return(error_condition) })
-      else if (input$timeCourseSelection == 3)
-        res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method="directMethod",model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
+      res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method=input$timeCourseSelection,model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
       resTask <- res
     }
     else if(selectedTask == "Metabolic Control Analysis"){
@@ -698,7 +693,16 @@ server <- function(input, output, session) {
         numericInput("obsIntervalSize", "Interval Size [s]:", 1, min = 0.1, max = 100)
       )
       output[[2]] = checkboxInput("startSteady","start in Steady State", value= F)
-      output[[3]] = selectInput("timeCourseSelection", "Select a Method:", choices = c('Deterministic (LSODA)'='1',' Stochastic (Gibson & Bruck) '='2', 'Stochastic (Direct method)'='3'))
+      output[[3]] = selectInput("timeCourseSelection", "Select a Method:", choices = c('Deterministic (LSODA)'='deterministic'
+                                                                                       ,'Stochastic (Gibson + Bruck) '='stochastic'
+                                                                                       ,'Stochastic (Direct method)'='directMethod'
+                                                                                       ,'Stochastic (Tau leap)'='tauLeap'
+                                                                                       ,'Stochastic (Adaptive SSA)'='adaptiveSA'
+                                                                                       ,'Hybrid (Runge-Kutta)'='hybrid'
+                                                                                       ,'Hybrid (LSODA)'='hybridLSODA'
+                                                                                       #,'Hybrid (RK45)'='hybridODE45'
+                                                                                       ,'SDE solver (RI5)'='stochasticRunkeKuttaRI5'
+                                                                                       ))
       output[[4]] = actionButton("runTask", "Run Task",icon=icon("angle-double-right"))
       output[[5]] = downloadButton("downloadData", "Download Results")
     }
