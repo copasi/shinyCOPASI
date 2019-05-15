@@ -70,6 +70,7 @@ server <- function(input, output, session) {
     inputFile$parameters <- CoRC::getParameters(model=inputFile$modelData)
     inputFile$stoichiometry <- CoRC::getStoichiometryMatrix(model=inputFile$modelData)
     inputFile$linkMatrix <- CoRC::getLinkMatrix(model=inputFile$modelData)
+    inputFile$settingsTC <- CoRC::getTimeCourseSettings(model=inputFile$modelData)
     inputFile$settingsOpt <- CoRC::getOptimizationSettings(model=inputFile$modelData)
     inputFile$settingsPE <- CoRC::getParameterEstimationSettings(model=inputFile$modelData)
     inputFile$taskList <- c('Compartments', 'Species', 'Reactions'
@@ -688,11 +689,11 @@ server <- function(input, output, session) {
     }
     else if (selectedTask == 'Time Course'){
       output[[1]] = splitLayout(
-        numericInput('obsTime', 'Duration [s]:', 100, min = 1, max = 1000),
+        numericInput('obsTime', 'Duration [s]:', ifelse(is.null(inputFile$modelData), 10, inputFile$settingsTC$duration), min = 1, max = 1000),
         #numericInput('obsInterval', 'Interval:', 10, min = 10, max = 100),
-        numericInput('obsIntervalSize', 'Interval Size [s]:', 1, min = 0.1, max = 100)
+        numericInput('obsIntervalSize', 'Interval Size [s]:', ifelse(is.null(inputFile$modelData), 1, inputFile$settingsTC$dt), min = 0.1, max = 100)
       )
-      output[[2]] = checkboxInput('startSteady','start in Steady State', value= F)
+      output[[2]] = checkboxInput('startSteady','start in Steady State', value= ifelse(is.null(inputFile$modelData), F, inputFile$settingsTC$start_in_steady_state))
       output[[3]] = selectInput('timeCourseSelection', 'Select a Method:', choices = c('Deterministic (LSODA)'='deterministic'
                                                                                        ,'Stochastic (Gibson + Bruck) '='stochastic'
                                                                                        ,'Stochastic (Direct method)'='directMethod'
@@ -702,7 +703,8 @@ server <- function(input, output, session) {
                                                                                        ,'Hybrid (LSODA)'='hybridLSODA'
                                                                                        #,'Hybrid (RK45)'='hybridODE45'
                                                                                        ,'SDE solver (RI5)'='stochasticRunkeKuttaRI5'
-                                                                                       ))
+                                                                                       )
+                                ,selected = ifelse(is.null(inputFile$modelData), 'deterministic', inputFile$settingsTC$method$method))
       output[[4]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
       output[[5]] = downloadButton('downloadData', 'Download Results')
     }
