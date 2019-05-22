@@ -1,24 +1,18 @@
 
-# library(shiny)
+check.packages <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, 'Package'])]
+  if (length(new.pkg)) 
+    install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
 
-# install.packages("devtools")
-# library(devtools)
-# install_github("jpahle/CoRC")
-# CoRC::getCopasi()
-# install_github("trestletech/shinyTree")
-# install.packages("reshape2")
-# install.packages("ggplot2")
-# install.packages("DT")
-# install.packages("markdown")
-# install.packages("XML")
+packages<-c('shiny','devtools', 'reshape2', 'ggplot2', 'shinyTree', 'markdown', 'formattable','XML')
+check.packages(packages)
 
-library(devtools)
-library(reshape2)
-library(ggplot2)
-library(shinyTree)
-library(markdown)
-library(formattable)
-library(XML)
+if(!('CoRC' %in% installed.packages()[, 'Package'])){
+  install_github('jpahle/CoRC')
+  CoRC::getCopasi()
+}
 
 ui <- fluidPage(list(tags$head(HTML('<link rel="icon", href="COPASI-logo.png", type="image/png" />'))),
   div(style='padding: 1px 0px;',
