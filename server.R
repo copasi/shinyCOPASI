@@ -290,41 +290,32 @@ server <- function(input, output, session) {
     progress$set(message = paste('Running ', selectedTask), value = 0)
     
     
-    if (selectedTask == 'Steady State'){
-      inputFile$settingsSS$method$resolution = input$resolutionSS
-      inputFile$settingsSS$method$derivation_factor = input$derivationFacSS
-      inputFile$settingsSS$method$use_newton = input$useNewtonSS
-      inputFile$settingsSS$method$use_integration = input$useIntegrationSS
-      inputFile$settingsSS$method$use_back_integration = input$useBackIntegrationSS
-      res <- tryCatch(CoRC::runSS(calculate_jacobian = input$calculateJacobian,perform_stability_analysis =input$performStabilityAnalysis,method=inputFile$settingsSS$method,model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
-      resTask <- res
-    }
-    else if (selectedTask == 'Mass Conservation'){
-      
+    if (selectedTask %in% c('Steady State','Linear Noise Approximation')){
+      if (selectedTask == 'Steady State') settingTask = CoRC::getSteadyStateSettings(model=inputFile$modelData)
+      else settingTask = CoRC::getLinearNoiseApproximationSettings(model=inputFile$modelData)
+      settingTask$method$resolution = input$resolution
+      settingTask$method$derivation_factor = input$derivationFac
+      settingTask$method$use_newton = input$useNewton
+      settingTask$method$use_integration = input$useIntegration
+      settingTask$method$use_back_integration = input$useBackIntegration
+      if (selectedTask == 'Steady State') resTask <- tryCatch(CoRC::runSS(calculate_jacobian = input$calculateJacobian,perform_stability_analysis =input$performStabilityAnalysis,method=settingTask$method,model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
+      if (selectedTask == 'Linear Noise Approximation') resTask <- tryCatch(CoRC::runLNA(perform_steady_state_analysis = input$lnaSelection,method=settingTask$method,model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
     }
     else if (selectedTask == 'Time Course'){
-      res <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method=input$timeCourseSelection,model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
-      resTask <- res
+      resTask <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method=input$timeCourseSelection,model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
     }
     else if(selectedTask == 'Metabolic Control Analysis'){
-      res <- tryCatch(CoRC::runMCA(perform_steady_state_analysis = input$mcaSelection, model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
-      resTask <- res
+      resTask <- tryCatch(CoRC::runMCA(perform_steady_state_analysis = input$mcaSelection, model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
     }
     else if (selectedTask == 'Optimization'){
-      res <- tryCatch(CoRC::runOptimization(model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
-      resTask <- res
+      resTask <- tryCatch(CoRC::runOptimization(model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
     }
     else if (selectedTask == 'Parameter Estimation'){
-      res <- tryCatch(CoRC::runParameterEstimation(model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
-      resTask <- res
-    }
-    else if (selectedTask == 'Linear Noise Approximation'){
-      res <- tryCatch(CoRC::runLNA(perform_steady_state_analysis = input$lnaSelection,model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
-      resTask <- res
+      resTask <- tryCatch(CoRC::runParameterEstimation(model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
     }
     else
       resTask <- 'No Task found'
-    
+
     return(resTask)
   })
   
@@ -383,7 +374,7 @@ server <- function(input, output, session) {
     else if(selectedTask == 'Metabolic Control Analysis'){
       data <- resTask()$elasticities_unscaled
     }
-    else if(selectedTask %in% c('Optimization','Parameter Estimation')){
+    else if(selectedTask %in% c('Optimization','Parameter Estimation') && !is.null(resTask()$main)){
       data <- t(as.data.frame(resTask()$main))
       colnames(data) <- c('Value')  
     }
@@ -682,17 +673,24 @@ server <- function(input, output, session) {
     if (selectedTask %in% c('Reactions','Species','Compartments', 'Global Quantities','Events','Parameters')){
       output[[1]] = ''
     }
-    else if (selectedTask == 'Steady State'){
-      output[[1]] = splitLayout(
-        checkboxInput('calculateJacobian','calculate Jacobian', value= ifelse(is.null(inputFile$modelData), T, inputFile$settingsSS$calculate_jacobian))
-        ,checkboxInput('performStabilityAnalysis','perform Stability Analysis', value= ifelse(is.null(inputFile$modelData), T, inputFile$settingsSS$perform_stability_analysis)))
+    else if (selectedTask %in% c('Steady State','Linear Noise Approximation')){
+      if (selectedTask == 'Steady State'){
+        if (!is.null(inputFile$modelData)) settingTask = CoRC::getSteadyStateSettings(model=inputFile$modelData)
+        output[[1]] = splitLayout(
+          checkboxInput('calculateJacobian','calculate Jacobian', value= ifelse(is.null(inputFile$modelData), T, settingTask$calculate_jacobian))
+          ,checkboxInput('performStabilityAnalysis','perform Stability Analysis', value= ifelse(is.null(inputFile$modelData), T, settingTask$perform_stability_analysis)))
+      }
+      else {
+        if (!is.null(inputFile$modelData))settingTask = CoRC::getLinearNoiseApproximationSettings(model=inputFile$modelData)
+        output[[1]] = checkboxInput('lnaSelection','perform Steady State Analysis',value = ifelse(is.null(inputFile$modelData), T, settingTask$perform_steady_state_analysis))
+      }
       output[[2]] = splitLayout(
-        numericInput('resolutionSS', 'Resolution:', ifelse(is.null(inputFile$modelData), 1e-9, inputFile$settingsSS$method$resolution), min = 1e-9, max = 1)
-        ,numericInput('derivationFacSS', 'Derivation Factor:', ifelse(is.null(inputFile$modelData), 1e-3, inputFile$settingsSS$method$derivation_factor), min = 1e-3, max = 1))
+        numericInput('resolution', 'Resolution:', ifelse(is.null(inputFile$modelData), 1e-9, settingTask$method$resolution), min = 1e-9, max = 1)
+        ,numericInput('derivationFac', 'Derivation Factor:', ifelse(is.null(inputFile$modelData), 1e-3, settingTask$method$derivation_factor), min = 1e-3, max = 1))
       output[[3]] = splitLayout(
-        checkboxInput('useNewtonSS','Use Newton', value= ifelse(is.null(inputFile$modelData), T, inputFile$settingsSS$method$use_newton))
-        ,checkboxInput('useIntegrationSS','Use Integration', value= ifelse(is.null(inputFile$modelData), T, inputFile$settingsSS$method$use_integration))
-        ,checkboxInput('useBackIntegrationSS','Use Back Integration', value= ifelse(is.null(inputFile$modelData), F, inputFile$settingsSS$method$use_back_integration)))
+        checkboxInput('useNewton','Use Newton', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_newton))
+        ,checkboxInput('useIntegration','Use Integration', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_integration))
+        ,checkboxInput('useBackIntegration','Use Back Integration', value= ifelse(is.null(inputFile$modelData), F, settingTask$method$use_back_integration)))
       output[[4]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
       output[[5]] = downloadButton('downloadData', 'Download Results')
     }
@@ -741,18 +739,12 @@ server <- function(input, output, session) {
       output[[3]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
       output[[4]] = downloadButton('downloadData', 'Download Results')
     }
-    else if (selectedTask == 'Linear Noise Approximation'){
-      output[[1]] = checkboxInput('lnaSelection','perform Steady State Analysis',value = T)
-      output[[2]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
-      output[[3]] = downloadButton('downloadData', 'Download Results')
-    }
-    
     output
   })
   
   ### Tree structure for task selection
   output$taskSelection <- renderTree({ 
-    sss=list('Model'= structure(list('Compartments'= structure('1',sticon='')
+    structTree =list('Model'= structure(list('Compartments'= structure('1',sticon='')
                                      ,'Species'= structure('2',sticon='')
                                      ,'Reactions'= structure('3',sticon='')
                                      ,'Global Quantities'= structure('4',sticon='')
@@ -769,7 +761,7 @@ server <- function(input, output, session) {
                           , sticon='')
       )
     #attr(sss[[1]],'stopened')=TRUE 
-    sss
+    structTree
   })
 
   
