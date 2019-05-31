@@ -70,7 +70,6 @@ server <- function(input, output, session) {
     inputFile$parameters <- CoRC::getParameters(model=inputFile$modelData)
     inputFile$stoichiometry <- CoRC::getStoichiometryMatrix(model=inputFile$modelData)
     inputFile$linkMatrix <- CoRC::getLinkMatrix(model=inputFile$modelData)
-    inputFile$settingsSS <- CoRC::getSteadyStateSettings(model=inputFile$modelData)
     inputFile$settingsTC <- CoRC::getTimeCourseSettings(model=inputFile$modelData)
     inputFile$settingsOpt <- CoRC::getOptimizationSettings(model=inputFile$modelData)
     inputFile$settingsPE <- CoRC::getParameterEstimationSettings(model=inputFile$modelData)
@@ -283,13 +282,10 @@ server <- function(input, output, session) {
     modelData <- inputFile$modelData
     selectedTask <- selection()
     
-    # Create a Progress object
-    progress <- shiny::Progress$new()
-    # Make sure it closes when we exit this reactive, even if there's an error
-    on.exit(progress$close())
+    progress <- shiny::Progress$new() # Create a Progress object
+    on.exit(progress$close()) # To make sure it closes when we exit this reactive, even if there's an error
     progress$set(message = paste('Running ', selectedTask), value = 0)
-    
-    
+
     if (selectedTask %in% c('Steady State','Linear Noise Approximation')){
       if (selectedTask == 'Steady State') settingTask = CoRC::getSteadyStateSettings(model=inputFile$modelData)
       else settingTask = CoRC::getLinearNoiseApproximationSettings(model=inputFile$modelData)
@@ -305,7 +301,11 @@ server <- function(input, output, session) {
       resTask <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method=input$timeCourseSelection,model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
     }
     else if(selectedTask == 'Metabolic Control Analysis'){
-      resTask <- tryCatch(CoRC::runMCA(perform_steady_state_analysis = input$mcaSelection, model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
+      settingTask = CoRC::getMetabolicControlAnalysisSettings(model=inputFile$modelData)
+      settingTask$method$modulation_factor = input$modulationFactor
+      settingTask$method$use_reder = input$useReder
+      settingTask$method$use_smallbone = input$useSmallbone
+      resTask <- tryCatch(CoRC::runMCA(perform_steady_state_analysis = input$mcaSelection, method= settingTask$method, model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
     }
     else if (selectedTask == 'Optimization'){
       resTask <- tryCatch(CoRC::runOptimization(model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
@@ -700,7 +700,6 @@ server <- function(input, output, session) {
     else if (selectedTask == 'Time Course'){
       output[[1]] = splitLayout(
         numericInput('obsTime', 'Duration [s]:', ifelse(is.null(inputFile$modelData), 10, inputFile$settingsTC$duration), min = 1, max = 1000),
-        #numericInput('obsInterval', 'Interval:', 10, min = 10, max = 100),
         numericInput('obsIntervalSize', 'Interval Size [s]:', ifelse(is.null(inputFile$modelData), 1, inputFile$settingsTC$dt), min = 0.1, max = 100)
       )
       output[[2]] = checkboxInput('startSteady','start in Steady State', value= ifelse(is.null(inputFile$modelData), F, inputFile$settingsTC$start_in_steady_state))
@@ -719,9 +718,14 @@ server <- function(input, output, session) {
       output[[5]] = downloadButton('downloadData', 'Download Results')
     }
     else if (selectedTask == 'Metabolic Control Analysis'){
+      if (!is.null(inputFile$modelData)) settingTask = CoRC::getMetabolicControlAnalysisSettings(model=inputFile$modelData)
       output[[1]] = checkboxInput('mcaSelection','perform Steady State Analysis',value = T)
-      output[[2]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
-      output[[3]] = downloadButton('downloadData', 'Download Results')
+      output[[2]] = numericInput('modulationFactor', 'Modulation Factor:', ifelse(is.null(inputFile$modelData), 1e-9, settingTask$method$modulation_factor), min = 1e-9, max = 1)
+      output[[3]] = splitLayout(
+        checkboxInput('useReder','Use Reder', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_reder))
+        ,checkboxInput('useSmallbone','Use Smallbone', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_smallbone)))
+      output[[4]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
+      output[[5]] = downloadButton('downloadData', 'Download Results')
     }
     else if (selectedTask == 'Optimization'){
       output[[1]] = tabsetPanel(id = 'PE'
@@ -760,7 +764,7 @@ server <- function(input, output, session) {
                                ,'Linear Noise Approximation'= structure('6',sticon=''))
                           , sticon='')
       )
-    #attr(sss[[1]],'stopened')=TRUE 
+    #attr(structTree[[1]],'stopened')=TRUE 
     structTree
   })
 
