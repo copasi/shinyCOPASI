@@ -70,6 +70,7 @@ server <- function(input, output, session) {
     inputFile$parameters <- CoRC::getParameters(model=inputFile$modelData)
     inputFile$stoichiometry <- CoRC::getStoichiometryMatrix(model=inputFile$modelData)
     inputFile$linkMatrix <- CoRC::getLinkMatrix(model=inputFile$modelData)
+    inputFile$settingsSS <- CoRC::getSteadyStateSettings(model=inputFile$modelData)
     inputFile$settingsTC <- CoRC::getTimeCourseSettings(model=inputFile$modelData)
     inputFile$settingsOpt <- CoRC::getOptimizationSettings(model=inputFile$modelData)
     inputFile$settingsPE <- CoRC::getParameterEstimationSettings(model=inputFile$modelData)
@@ -290,7 +291,12 @@ server <- function(input, output, session) {
     
     
     if (selectedTask == 'Steady State'){
-      res <- tryCatch(CoRC::runSS(calculate_jacobian = input$calculateJacobian,perform_stability_analysis =input$calculateJacobian,model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
+      inputFile$settingsSS$method$resolution = input$resolutionSS
+      inputFile$settingsSS$method$derivation_factor = input$derivationFacSS
+      inputFile$settingsSS$method$use_newton = input$useNewtonSS
+      inputFile$settingsSS$method$use_integration = input$useIntegrationSS
+      inputFile$settingsSS$method$use_back_integration = input$useBackIntegrationSS
+      res <- tryCatch(CoRC::runSS(calculate_jacobian = input$calculateJacobian,perform_stability_analysis =input$performStabilityAnalysis,method=inputFile$settingsSS$method,model=modelData), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
       resTask <- res
     }
     else if (selectedTask == 'Mass Conservation'){
@@ -678,11 +684,17 @@ server <- function(input, output, session) {
     }
     else if (selectedTask == 'Steady State'){
       output[[1]] = splitLayout(
-        checkboxInput('calculateJacobian','calculate Jacobian', value= T)
-        #,checkboxInput('performStabilityAnalysis','perform Stability Analysis', value= T)
-      )
-      output[[2]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
-      output[[3]] = downloadButton('downloadData', 'Download Results')
+        checkboxInput('calculateJacobian','calculate Jacobian', value= ifelse(is.null(inputFile$modelData), T, inputFile$settingsSS$calculate_jacobian))
+        ,checkboxInput('performStabilityAnalysis','perform Stability Analysis', value= ifelse(is.null(inputFile$modelData), T, inputFile$settingsSS$perform_stability_analysis)))
+      output[[2]] = splitLayout(
+        numericInput('resolutionSS', 'Resolution:', ifelse(is.null(inputFile$modelData), 1e-9, inputFile$settingsSS$method$resolution), min = 1e-9, max = 1)
+        ,numericInput('derivationFacSS', 'Derivation Factor:', ifelse(is.null(inputFile$modelData), 1e-3, inputFile$settingsSS$method$derivation_factor), min = 1e-3, max = 1))
+      output[[3]] = splitLayout(
+        checkboxInput('useNewtonSS','Use Newton', value= ifelse(is.null(inputFile$modelData), T, inputFile$settingsSS$method$use_newton))
+        ,checkboxInput('useIntegrationSS','Use Integration', value= ifelse(is.null(inputFile$modelData), T, inputFile$settingsSS$method$use_integration))
+        ,checkboxInput('useBackIntegrationSS','Use Back Integration', value= ifelse(is.null(inputFile$modelData), F, inputFile$settingsSS$method$use_back_integration)))
+      output[[4]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
+      output[[5]] = downloadButton('downloadData', 'Download Results')
     }
     else if (selectedTask == 'Mass Conservation'){
       output[[1]] = ''
