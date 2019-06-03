@@ -1,14 +1,11 @@
 
 ## server file
 server <- function(input, output, session) {
-  
   ## limit for the input file size
   options(shiny.maxRequestSize=30*1024^2) 
-  
   ## to store the current selection
   selection <- renderText({
-    selectedText <- unlist(get_selected(input$taskSelection))
-    return(selectedText)
+    return(unlist(get_selected(input$taskSelection)))
   })
   
   ## to store the error encountered
@@ -84,12 +81,7 @@ server <- function(input, output, session) {
   ## Theme functions for the plots
   theme_pm <- function () {
     theme_bw(base_size=12) + #base_family='Arial Black'
-      theme(
-        panel.grid=element_line(linetype='dashed', color='light grey', size=0.2),
-        axis.ticks.length=unit(-0.15, 'cm'),
-        axis.text.x = element_text(margin=unit(c(0.25,0.25,0.25,0.25),'cm')),
-        axis.text.y = element_text(margin=unit(c(0.25,0.25,0.25,0.25),'cm'))
-      )
+      theme(panel.grid=element_line(linetype='dashed', color='light grey', size=0.2),axis.ticks.length=unit(-0.15, 'cm'),axis.text.x = element_text(margin=unit(c(0.25,0.25,0.25,0.25),'cm')),axis.text.y = element_text(margin=unit(c(0.25,0.25,0.25,0.25),'cm')))
   }
   
   output$modelInfo <- renderText({
@@ -131,14 +123,11 @@ server <- function(input, output, session) {
           else
             valfileName= paste(' <font color=','red','>  Please load a valid data file along with the model. File name: <b>', valfileName ,'</b> </font> ')
         }
-        
         strOut= paste('<h2>',selectedTask,'</h2>')
         strOut= paste(strOut, '<pre><b> Experimental Data: </b>',expfileName,'<br> <br>')
         strOut= paste(strOut, '<b>Validation Data: </b>',valfileName,'<br>')
         strOut= paste(strOut, '<pre><b> Randomize Start Values: </b>',inputFile$settingsPE$randomize_start_values)
         strOut= paste(strOut, '<b>  Calculate Statistics: </b>',inputFile$settingsPE$calculate_statistics, '</pre></pre>')
-        return(strOut)
-        
       }
       else if (selectedTask == 'Optimization' ){
         strOut= paste('<h2>',selectedTask,'</h2>')
@@ -147,13 +136,11 @@ server <- function(input, output, session) {
         strOut= paste(strOut, '<b>Subtask: </b>',inputFile$settingsOpt$subtask)
         strOut= paste(strOut, '<pre><b> Randomize Start Values: </b>',inputFile$settingsOpt$randomize_start_values)
         strOut= paste(strOut, '<b>  Calculate Statistics: </b>',inputFile$settingsOpt$calculate_statistics, '</pre></pre>')
-        return(strOut)
       }
       else
-        return(paste('<h2>',selectedTask,'</h2>'))
+        strOut= paste('<h2>',selectedTask,'</h2>')
     }
     else if (selectedTask == 'Model' || inputFile$modelLoaded == T){
-      #strOut= paste('<h2>',selectedTask,'</h2>')
       strOut= paste('<pre><b> Model: </b>',inputFile$modelAttrs[[2]],'<br>')
       strOut= paste(strOut,'<pre><table><tr><th>Time Unit:</th><td>',inputFile$modelAttrs[[4]]
                     ,'</td><th>Volume Unit:</th><td>',inputFile$modelAttrs[[5]],'</td></tr>')
@@ -161,9 +148,8 @@ server <- function(input, output, session) {
                     ,'</td><th>Area Unit:</th><td>',inputFile$modelAttrs[[6]],'</td></tr>')
       strOut= paste(strOut,'<tr><th>Avogadro Constant:</th><td>',inputFile$modelAttrs[[10]]
                     ,'</td><th>Length Unit:</th><td>',inputFile$modelAttrs[[7]],'</td></tr></table></pre></pre>')
-      
-      return(strOut)
-    }
+      }
+    return(strOut)
   })
   
   output$selectedMethod<- renderText({
@@ -227,10 +213,7 @@ server <- function(input, output, session) {
           }
           else if (paramValue[[1]]== 'StartValue'){
             resTable$StartValue[i] = paramValue[[3]]
-          }
-        }
-      }
-    }
+          }}}}
     return(resTable)
   }
   
@@ -269,10 +252,7 @@ server <- function(input, output, session) {
           }
           else if (paramValue[[1]]== 'UpperBound'){
             resTable$UpperBound[i] = paramValue[[3]]
-          }
-        }
-      }
-    }
+            }}}}
     return(resTable)
   }
   
@@ -287,8 +267,8 @@ server <- function(input, output, session) {
     progress$set(message = paste('Running ', selectedTask), value = 0)
 
     if (selectedTask %in% c('Steady State','Linear Noise Approximation')){
-      if (selectedTask == 'Steady State') settingTask = CoRC::getSteadyStateSettings(model=inputFile$modelData)
-      else settingTask = CoRC::getLinearNoiseApproximationSettings(model=inputFile$modelData)
+      if (selectedTask == 'Steady State') settingTask = CoRC::getSteadyStateSettings(model=modelData)
+      else settingTask = CoRC::getLinearNoiseApproximationSettings(model=modelData)
       settingTask$method$resolution = input$resolution
       settingTask$method$derivation_factor = input$derivationFac
       settingTask$method$use_newton = input$useNewton
@@ -301,7 +281,7 @@ server <- function(input, output, session) {
       resTask <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method=input$timeCourseSelection,model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
     }
     else if(selectedTask == 'Metabolic Control Analysis'){
-      settingTask = CoRC::getMetabolicControlAnalysisSettings(model=inputFile$modelData)
+      settingTask = CoRC::getMetabolicControlAnalysisSettings(model=modelData)
       settingTask$method$modulation_factor = input$modulationFactor
       settingTask$method$use_reder = input$useReder
       settingTask$method$use_smallbone = input$useSmallbone
@@ -331,7 +311,6 @@ server <- function(input, output, session) {
       if (is.null(file) || error() != '' || is.null(resTask()))
         return(NULL)
       selectedTask <- selection()
-      
       if (selectedTask == 'Steady State'){
         writeData <- resTask()$species[,c('name','concentration','rate','transition_time')]
       }
@@ -391,8 +370,7 @@ server <- function(input, output, session) {
   output$tableSS <- DT::renderDataTable({
     if (error() != '' || is.null(resTask()))
       return(NULL)
-    data <- resTask()$species[,c('name','concentration','rate','transition_time')]
-    return(data)
+    return(resTask()$species[,c('name','concentration','rate','transition_time')])
   },options = list(scrollX = TRUE, scrollY = '400px'))
   
   output$tableJac <- DT::renderDataTable({
@@ -440,20 +418,17 @@ server <- function(input, output, session) {
   output$tablePEexp <- DT::renderDataTable({
     if (error() != '' || is.null(resTask()))
       return(NULL)
-    data <- resTask()$experiments
-    return(data)
+    return(resTask()$experiments)
   },options = list(scrollX = TRUE, scrollY = '400px'))
   
   
   ## Display the selected parameters and constraints 
   output$tableParameterList <- DT::renderDataTable({
-    data = paramList()
-    if (!is.null(data)) return(data)
+    if(!is.null(paramList())) return(paramList())
   },options = list(scrollX = TRUE, scrollY = '200px'))
   
   output$tableConstraintList <- DT::renderDataTable({
-    data = constrList()
-    if (!is.null(data)) return(data)
+    if (!is.null(constrList())) return(constrList())
   },options = list(scrollX = TRUE, scrollY = '200px'))
   
   ## Display information of the loaded model
@@ -461,56 +436,46 @@ server <- function(input, output, session) {
     if (is.null(inputFile$modelData))
       return()
     selectedTask <- selection()
+    tableModel <-  data.frame()
     if (selectedTask == 'Compartments'){
-      tableCompartments <- inputFile$compartments
-      if (!is.null(tableCompartments)){
-        tableCompartments <- tableCompartments[,c(-1)]    
-      }
-      return(tableCompartments)
-    }
+      tableModel <- inputFile$compartments
+      if (!is.null(tableModel)){
+        tableModel <- tableModel[,c(-1)]    
+      }}
     else if (selectedTask == 'Species'){
-      tableSpecies <- inputFile$species
-      tableSpecies <- tableSpecies[,c(-1,-7,-9,-11)]
-      return(tableSpecies)
+      tableModel <- inputFile$species
+      tableModel <- tableModel[,c(-1,-7,-9,-11)]
     }
     else if (selectedTask == 'Reactions'){
-      tableReactions <- inputFile$reactions
-      if (!is.null(tableReactions)){
-        tableReactions <- tableReactions[,c('name','reaction','rate_law','flux')]
-        tableReactions$rate_law <- gsub('.*\\[|\\]', '', tableReactions$rate_law)        
-      }
-      return(tableReactions)
-    }
+      tableModel <- inputFile$reactions
+      if (!is.null(tableModel)){
+        tableModel <- tableModel[,c('name','reaction','rate_law','flux')]
+        tableModel$rate_law <- gsub('.*\\[|\\]', '', tableModel$rate_law)        
+      }}
     else if (selectedTask == 'Global Quantities'){
-      tableGlobalQuantities <- inputFile$globalQuantities
-      tableGlobalQuantities <- tableGlobalQuantities[,-1]
-      return(tableGlobalQuantities)
+      tableModel <- inputFile$globalQuantities
+      tableModel <- tableModel[,-1]
     } 
     else if (selectedTask == 'Events'){
-      tableEvents <- data.frame(inputFile$events)
-      if (!is.null(tableEvents)){
-        tableEvents <- tableEvents[,-1]
-        tableEvents$assignment_target <- gsub('.*\\(|\\)', '', tableEvents$assignment_target)
-        tableEvents$assignment_expression <- gsub('.*\\(|\\)', '', tableEvents$assignment_expression)
-      }
-      #tableEvents <- tableEvents[,c(-1)]
-      return(data.frame(tableEvents))
-    } 
+      tableModel <- data.frame(inputFile$events)
+      if (!is.null(tableModel)){
+        tableModel <- tableModel[,-1]
+        tableModel$assignment_target <- gsub('.*\\(|\\)', '', tableModel$assignment_target)
+        tableModel$assignment_expression <- gsub('.*\\(|\\)', '', tableModel$assignment_expression)
+      }} 
     else if (selectedTask == 'Parameters'){
-      tableParameters <- inputFile$parameters
-      if (!is.null(tableParameters)){
-        tableParameters <- tableParameters[,-1]
-        tableParameters$mapping <- gsub('.*\\[|\\]', '', tableParameters$mapping)  
-      }
-      return(tableParameters)
-    } 
+      tableModel <- inputFile$parameters
+      if (!is.null(tableModel)){
+        tableModel <- tableModel[,-1]
+        tableModel$mapping <- gsub('.*\\[|\\]', '', tableModel$mapping)  
+      }}
+    return(tableModel)
   },options = list(scrollX = TRUE, scrollY = '400px'))
   
   
 #### To render UI and plots for different tasks ####
   output$plotOverview <- renderPlot({
     selectedTask <- selection()
-
     if (selectedTask == 'Species'){
       tableSpecies <- inputFile$species
       if (!is.null(tableSpecies) && nrow(tableSpecies) !=0 ){
@@ -527,11 +492,9 @@ server <- function(input, output, session) {
     else if (selectedTask == 'Parameters'){
       tableParameters <- inputFile$parameters
       if (!is.null(tableParameters) && nrow(tableParameters) !=0 && !all(is.na(tableParameters$value))){
-        ylabel <- paste()
         barplot(tableParameters$value, main='Parameters overview', ylab='Value', names.arg=tableParameters$name, cex.names=0.8,las=2)
       }
     }
-    
   })
   
   output$plot <- renderPlot({
@@ -540,7 +503,6 @@ server <- function(input, output, session) {
     
     selectedTask <- selection()
     data <- resTask()$result
-    
     if (selectedTask == 'Time Course' && 'Time' %in% names(data)){
       data <- data[, c('Time',input$columns), drop = FALSE]
       melted <- melt(data,id.vars='Time')
@@ -559,53 +521,33 @@ server <- function(input, output, session) {
     if (is.null(inputFile$modelData))
       return(NULL)
     if (selectedTask %in% c('Species','Global Quantities','Parameters')){
-      tabsetPanel(id = 'mdl'
-                  ,tabPanel('Table',DT::dataTableOutput('tableModel'))
-                  ,tabPanel('Overview', plotOutput('plotOverview'))
-      )
+      tabsetPanel(id = 'mdl',tabPanel('Table',DT::dataTableOutput('tableModel')),tabPanel('Overview', plotOutput('plotOverview')))
     }
     else if (selectedTask %in% c('Reactions','Compartments', 'Events')){
         tabPanel('Table',DT::dataTableOutput('tableModel'))
       }
     else if (selectedTask == 'Time Course'){
-      tabsetPanel(id = 'TC'
-        ,tabPanel('Time Course',DT::dataTableOutput('tableResults'))
-        ,tabPanel('Plot', plotOutput('plot'))
-      )
+      tabsetPanel(id = 'TC',tabPanel('Time Course',DT::dataTableOutput('tableResults')),tabPanel('Plot', plotOutput('plot')))
     }
     else if (selectedTask == 'Steady State'){
-      tabsetPanel(id = 'SS'
-        ,tabPanel('Steady State', DT::dataTableOutput('tableSS'))
-        ,tabPanel('Jacobian', DT::dataTableOutput('tableJac'))
-      )
+      tabsetPanel(id = 'SS',tabPanel('Steady State', DT::dataTableOutput('tableSS')),tabPanel('Jacobian', DT::dataTableOutput('tableJac')))
     }
     else if(selectedTask == 'Metabolic Control Analysis'){
       tabPanel('Table',DT::dataTableOutput('tableResults'))
     }
     else if(selectedTask == 'Optimization'){
-      tabsetPanel(id = 'PE'
-                  ,tabPanel('Main',DT::dataTableOutput('tableResults'))
-                  ,tabPanel('Optimized Parameters',DT::dataTableOutput('tablePEfit'))
-      )
+      tabsetPanel(id = 'PE',tabPanel('Main',DT::dataTableOutput('tableResults')),tabPanel('Optimized Parameters',DT::dataTableOutput('tablePEfit')))
     }
     else if(selectedTask == 'Parameter Estimation'){
-      tabsetPanel(id = 'PE'
-                  ,tabPanel('Main',DT::dataTableOutput('tableResults'))
-                  ,tabPanel('Fitted Parameters',DT::dataTableOutput('tablePEfit'))
-                  ,tabPanel('Experiments', DT::dataTableOutput('tablePEexp'))
-      )
+      tabsetPanel(id = 'PE',tabPanel('Main',DT::dataTableOutput('tableResults')),tabPanel('Fitted Parameters',DT::dataTableOutput('tablePEfit')),tabPanel('Experiments', DT::dataTableOutput('tablePEexp')))
     }
     else if(selectedTask == 'Linear Noise Approximation'){
       tabPanel('Table',DT::dataTableOutput('tableResults'))
     }
     else if(selectedTask == 'Mass Conservation'){
-      tabsetPanel(id = 'MC'
-        ,tabPanel('Stoichiometry',DT::dataTableOutput('tableStoich'))
-        ,tabPanel('Link Matrix',DT::dataTableOutput('tableLM'))
-      )
+      tabsetPanel(id = 'MC',tabPanel('Stoichiometry',DT::dataTableOutput('tableStoich')),tabPanel('Link Matrix',DT::dataTableOutput('tableLM')))
     }
     else{
-      
     }
   })
   
@@ -623,13 +565,9 @@ server <- function(input, output, session) {
       melted <- melt(data,id.vars='Time')
       colnames(melted)[2:3] <- c('Species', 'Number')
       colnames <- unique(melted$Species)
-      
       output[[1]] = actionButton('showAll', 'Show/Hide All')
       # Create the checkboxes and select them all by default
-      output[[2]] = checkboxGroupInput('columns', '', 
-                         choices  = colnames,
-                         selected = colnames,
-                         inline = T)
+      output[[2]] = checkboxGroupInput('columns', '', choices  = colnames, selected = colnames, inline = T)
     }
     output
   })
@@ -637,37 +575,27 @@ server <- function(input, output, session) {
   observeEvent(input$showAll,{
     if(error() != '' || is.null(resTask()))
       return(NULL)
+    
+    data <- resTask()$result
+    melted <- melt(data,id.vars='Time')
+    colnames(melted)[2:3] <- c('Species', 'Number')
+    colnames <- unique(melted$Species)
+    if (input$showAll %% 2 == 0){
+      updateCheckboxGroupInput(session=session,'columns', choices= colnames, selected= colnames,inline = T)
+    }
     else {
-      data <- resTask()$result
-      melted <- melt(data,id.vars='Time')
-      colnames(melted)[2:3] <- c('Species', 'Number')
-      colnames <- unique(melted$Species)
-      
-      if (input$showAll %% 2 == 0){
-        updateCheckboxGroupInput(session=session,'columns',
-                                 choices  = colnames,
-                                 selected = colnames,
-                                 inline = T)
-      }
-      else {
-        updateCheckboxGroupInput(session=session,'columns',
-                                 choices  = colnames,
-                                 selected = NULL,
-                                 inline = T)
-      }
-      }
+      updateCheckboxGroupInput(session=session,'columns', choices= colnames, selected= NULL,inline = T)
+    }
   })
 
 #### To generate options interface for tasks ####
   output$choose_options <- renderUI({
-    
     # If missing input, return to avoid error later in function
     if(length(get_selected(input$taskSelection))==0)
       return(NULL)
     else{
       textOutput('selection')
     }
-
     output = tagList()
     selectedTask <- selection()
     if (selectedTask %in% c('Reactions','Species','Compartments', 'Global Quantities','Events','Parameters')){
@@ -676,32 +604,19 @@ server <- function(input, output, session) {
     else if (selectedTask %in% c('Steady State','Linear Noise Approximation')){
       if (selectedTask == 'Steady State'){
         if (!is.null(inputFile$modelData)) settingTask = CoRC::getSteadyStateSettings(model=inputFile$modelData)
-        output[[1]] = splitLayout(
-          checkboxInput('calculateJacobian','calculate Jacobian', value= ifelse(is.null(inputFile$modelData), T, settingTask$calculate_jacobian))
-          ,checkboxInput('performStabilityAnalysis','perform Stability Analysis', value= ifelse(is.null(inputFile$modelData), T, settingTask$perform_stability_analysis)))
+        output[[1]] = splitLayout(checkboxInput('calculateJacobian','calculate Jacobian', value= ifelse(is.null(inputFile$modelData), T, settingTask$calculate_jacobian)),checkboxInput('performStabilityAnalysis','perform Stability Analysis', value= ifelse(is.null(inputFile$modelData), T, settingTask$perform_stability_analysis)))
       }
       else {
         if (!is.null(inputFile$modelData))settingTask = CoRC::getLinearNoiseApproximationSettings(model=inputFile$modelData)
         output[[1]] = checkboxInput('lnaSelection','perform Steady State Analysis',value = ifelse(is.null(inputFile$modelData), T, settingTask$perform_steady_state_analysis))
       }
-      output[[2]] = splitLayout(
-        numericInput('resolution', 'Resolution:', ifelse(is.null(inputFile$modelData), 1e-9, settingTask$method$resolution), min = 1e-9, max = 1)
-        ,numericInput('derivationFac', 'Derivation Factor:', ifelse(is.null(inputFile$modelData), 1e-3, settingTask$method$derivation_factor), min = 1e-3, max = 1))
-      output[[3]] = splitLayout(
-        checkboxInput('useNewton','Use Newton', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_newton))
-        ,checkboxInput('useIntegration','Use Integration', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_integration))
-        ,checkboxInput('useBackIntegration','Use Back Integration', value= ifelse(is.null(inputFile$modelData), F, settingTask$method$use_back_integration)))
+      output[[2]] = splitLayout(numericInput('resolution', 'Resolution:', ifelse(is.null(inputFile$modelData), 1e-9, settingTask$method$resolution), min = 1e-9, max = 1),numericInput('derivationFac', 'Derivation Factor:', ifelse(is.null(inputFile$modelData), 1e-3, settingTask$method$derivation_factor), min = 1e-3, max = 1))
+      output[[3]] = splitLayout(checkboxInput('useNewton','Use Newton', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_newton)),checkboxInput('useIntegration','Use Integration', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_integration)),checkboxInput('useBackIntegration','Use Back Integration', value= ifelse(is.null(inputFile$modelData), F, settingTask$method$use_back_integration)))
       output[[4]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
       output[[5]] = downloadButton('downloadData', 'Download Results')
     }
-    else if (selectedTask == 'Mass Conservation'){
-      output[[1]] = ''
-    }
     else if (selectedTask == 'Time Course'){
-      output[[1]] = splitLayout(
-        numericInput('obsTime', 'Duration [s]:', ifelse(is.null(inputFile$modelData), 10, inputFile$settingsTC$duration), min = 1, max = 1000),
-        numericInput('obsIntervalSize', 'Interval Size [s]:', ifelse(is.null(inputFile$modelData), 1, inputFile$settingsTC$dt), min = 0.1, max = 100)
-      )
+      output[[1]] = splitLayout(numericInput('obsTime', 'Duration [s]:', ifelse(is.null(inputFile$modelData), 10, inputFile$settingsTC$duration), min = 1, max = 1000),numericInput('obsIntervalSize', 'Interval Size [s]:', ifelse(is.null(inputFile$modelData), 1, inputFile$settingsTC$dt), min = 0.0001, max = 100))
       output[[2]] = checkboxInput('startSteady','start in Steady State', value= ifelse(is.null(inputFile$modelData), F, inputFile$settingsTC$start_in_steady_state))
       output[[3]] = selectInput('timeCourseSelection', 'Select a Method:', choices = c('Deterministic (LSODA)'='deterministic'
                                                                                        ,'Stochastic (Gibson + Bruck) '='stochastic'
@@ -711,8 +626,7 @@ server <- function(input, output, session) {
                                                                                        ,'Hybrid (Runge-Kutta)'='hybrid'
                                                                                        ,'Hybrid (LSODA)'='hybridLSODA'
                                                                                        #,'Hybrid (RK45)'='hybridODE45'
-                                                                                       ,'SDE solver (RI5)'='stochasticRunkeKuttaRI5'
-                                                                                       )
+                                                                                       ,'SDE solver (RI5)'='stochasticRunkeKuttaRI5')
                                 ,selected = ifelse(is.null(inputFile$modelData), 'deterministic', inputFile$settingsTC$method$method))
       output[[4]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
       output[[5]] = downloadButton('downloadData', 'Download Results')
@@ -721,24 +635,18 @@ server <- function(input, output, session) {
       if (!is.null(inputFile$modelData)) settingTask = CoRC::getMetabolicControlAnalysisSettings(model=inputFile$modelData)
       output[[1]] = checkboxInput('mcaSelection','perform Steady State Analysis',value = T)
       output[[2]] = numericInput('modulationFactor', 'Modulation Factor:', ifelse(is.null(inputFile$modelData), 1e-9, settingTask$method$modulation_factor), min = 1e-9, max = 1)
-      output[[3]] = splitLayout(
-        checkboxInput('useReder','Use Reder', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_reder))
-        ,checkboxInput('useSmallbone','Use Smallbone', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_smallbone)))
+      output[[3]] = splitLayout(checkboxInput('useReder','Use Reder', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_reder)),checkboxInput('useSmallbone','Use Smallbone', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_smallbone)))
       output[[4]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
       output[[5]] = downloadButton('downloadData', 'Download Results')
     }
     else if (selectedTask == 'Optimization'){
-      output[[1]] = tabsetPanel(id = 'PE'
-                                ,tabPanel('Parameters', DT::dataTableOutput('tableParameterList'))
-                                ,tabPanel('Constraints', DT::dataTableOutput('tableConstraintList')) )
+      output[[1]] = tabsetPanel(id = 'PE',tabPanel('Parameters', DT::dataTableOutput('tableParameterList')),tabPanel('Constraints', DT::dataTableOutput('tableConstraintList')) )
       output[[2]] = htmlOutput('selectedMethod')
       output[[3]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
       output[[4]] = downloadButton('downloadData', 'Download Results')
     }
     else if (selectedTask == 'Parameter Estimation'){
-      output[[1]] = tabsetPanel(id = 'PE'
-                                ,tabPanel('Parameters', DT::dataTableOutput('tableParameterList'))
-                                ,tabPanel('Constraints', DT::dataTableOutput('tableConstraintList')) )
+      output[[1]] = tabsetPanel(id = 'PE',tabPanel('Parameters', DT::dataTableOutput('tableParameterList')),tabPanel('Constraints', DT::dataTableOutput('tableConstraintList')) )
       output[[2]] = htmlOutput('selectedMethod')
       output[[3]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
       output[[4]] = downloadButton('downloadData', 'Download Results')
@@ -748,25 +656,9 @@ server <- function(input, output, session) {
   
   ### Tree structure for task selection
   output$taskSelection <- renderTree({ 
-    structTree =list('Model'= structure(list('Compartments'= structure('1',sticon='')
-                                     ,'Species'= structure('2',sticon='')
-                                     ,'Reactions'= structure('3',sticon='')
-                                     ,'Global Quantities'= structure('4',sticon='')
-                                     ,'Events'= structure('5',sticon='')
-                                     ,'Parameters'= structure('6',sticon=''))
-                                , sticon='')
-      ,'Tasks'= structure(list('Steady State'= structure('1',sticon='')
-                               ,'Stoichiometric Analysis'= structure(list('Mass Conservation'= structure('1',sticon='')),sticon='')
-                               ,'Time Course'= structure('2',sticon='')
-                               ,'Metabolic Control Analysis'= structure('3',sticon='')
-                               ,'Optimization'= structure('4',sticon='')
-                               ,'Parameter Estimation'= structure('5',sticon='')
-                               ,'Linear Noise Approximation'= structure('6',sticon=''))
-                          , sticon='')
-      )
+    structTree =list('Model'= structure(list('Compartments'= structure('1',sticon=''),'Species'= structure('2',sticon=''),'Reactions'= structure('3',sticon=''),'Global Quantities'= structure('4',sticon=''),'Events'= structure('5',sticon=''),'Parameters'= structure('6',sticon='')), sticon='')
+                     ,'Tasks'= structure(list('Steady State'= structure('1',sticon=''),'Stoichiometric Analysis'= structure(list('Mass Conservation'= structure('1',sticon='')),sticon=''),'Time Course'= structure('2',sticon=''),'Metabolic Control Analysis'= structure('3',sticon=''),'Optimization'= structure('4',sticon=''),'Parameter Estimation'= structure('5',sticon=''),'Linear Noise Approximation'= structure('6',sticon='')), sticon=''))
     #attr(structTree[[1]],'stopened')=TRUE 
     structTree
   })
-
-  
 }
