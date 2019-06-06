@@ -194,7 +194,6 @@ server <- function(input, output, session) {
     numParameters= xmlSize(xmlChildren(xmlList))
     if (numParameters < 1)
       return()
-    
     resTable <- setNames(data.frame(matrix(ncol = 4, nrow = numParameters)), c('LowerBound', 'Parameter', 'UpperBound','StartValue'))
     for (i in 1:numParameters){
       xmlListIN <- xmlChildren(xmlList[[i]])
@@ -231,8 +230,7 @@ server <- function(input, output, session) {
     else{
       return()
     }
-    
-    
+
     numParameters= xmlSize(xmlChildren(xmlList))
     if (numParameters < 1)
       return()
@@ -335,82 +333,64 @@ server <- function(input, output, session) {
       write.csv(writeData,file)
       }
   )
-  #content = function(file) { write.csv(resTask()[, c('Time',input$columns), drop = FALSE],file)
-  
   
 #### To render output tables for different tasks ####
-  output$tableResults <- DT::renderDataTable({
+  
+  ## Output task-specific results
+  output$tableResults1 <- DT::renderDataTable({
     if (error() != '' || is.null(resTask()))
       return(NULL)
     
     selectedTask <- selection()
-    if (selectedTask == 'Time Course' && 'Time' %in% names(resTask()$result) && !is.null(input$columns)){
-      data <- resTask()$result[, c('Time',input$columns), drop = FALSE]
+    if (selectedTask == 'Steady State'){
+      return(resTask()$species[,c('name','concentration','rate','transition_time')])
+    }
+    else if (selectedTask == 'Time Course' && 'Time' %in% names(resTask()$result) && !is.null(input$columns)){
+      return(resTask()$result[, c('Time',input$columns), drop = FALSE])
     }
     else if(selectedTask == 'Metabolic Control Analysis'){
-      data <- resTask()$elasticities_unscaled
+      return(resTask()$elasticities_unscaled)
     }
     else if(selectedTask %in% c('Optimization','Parameter Estimation') && !is.null(resTask()$main)){
       data <- t(as.data.frame(resTask()$main))
-      colnames(data) <- c('Value')  
+      colnames(data) <- c('Value')
+      return(data)
     }
     else if(selectedTask == 'Linear Noise Approximation'){
-      data <- resTask()$covariance_matrix
+      return(resTask()$covariance_matrix)
     }
     else
-      data <- NULL
+      return(NULL)
+    },options = list(scrollX = TRUE, scrollY = '400px'))
+  
+  
+  output$tableResults2 <- DT::renderDataTable({
+    if (error() != '' || is.null(resTask()))
+      return(NULL)
     
-    return(data)
-  },options = list(scrollX = TRUE, scrollY = '400px'))
-  
-  ## Output task-specific results
-  output$tableSS <- DT::renderDataTable({
-    if (error() != '' || is.null(resTask()))
-      return(NULL)
-    return(resTask()$species[,c('name','concentration','rate','transition_time')])
-  },options = list(scrollX = TRUE, scrollY = '400px'))
-  
-  output$tableJac <- DT::renderDataTable({
-    if (error() != '' || is.null(resTask()))
-      return(NULL)
-    colNames <- colnames(resTask()$jacobian_complete)
-    data <- data.frame(resTask()$jacobian_complete)
-    data <- formattable(data, list(area(col = colnames(data)) ~ color_tile('lightpink', 'lightgreen')))
-    colnames(data) <- colNames
-    return(as.datatable(data,options = list(scrollX = TRUE, scrollY = '400px')))
-  })
-  
-  output$tableLM <- DT::renderDataTable({
-    if (is.null(inputFile$modelData))
-      return()
-    colNames <- colnames(inputFile$linkMatrix)
-    data <- data.frame(inputFile$linkMatrix)
-    data <- formattable(data, list(area(col = colnames(data)) ~ color_tile('lightpink', 'lightgreen')))
-    colnames(data) <- colNames
-    return(as.datatable(data,options = list(scrollX = TRUE, scrollY = '400px')))
-  })
-  
-  output$tableStoich <- DT::renderDataTable({
-    if (is.null(inputFile$modelData))
-      return()
-    colNames <- colnames(inputFile$stoichiometry)
-    data <- data.frame(inputFile$stoichiometry)
-    data <- formattable(data, list(area(col = colnames(data)) ~ color_tile('lightpink', 'lightgreen')))
-    colnames(data) <- colNames
-    return(as.datatable(data,options = list(scrollX = TRUE, scrollY = '400px')))
-  })
-  
-  output$tablePEfit <- DT::renderDataTable({
-    if (error() != '' || is.null(resTask()))
-      return(NULL)
     selectedTask <- selection()
-    if(selectedTask == 'Optimization'){
+    if (selectedTask == 'Steady State'){
+      colNames <- colnames(resTask()$jacobian_complete)
+      data <- data.frame(resTask()$jacobian_complete)
+      data <- formattable(data, list(area(col = colnames(data)) ~ color_tile('lightpink', 'lightgreen')))
+      colnames(data) <- colNames
+      return(as.datatable(data,options = list(scrollX = TRUE, scrollY = '400px')))
+    }
+    else if(selectedTask == 'Metabolic Control Analysis'){
+      return(resTask()$elasticities_unscaled)
+    }
+    else if(selectedTask == 'Optimization'){
       return(resTask()$parameters)
     }
     else if(selectedTask == 'Parameter Estimation'){
       return(resTask()$parameter)
     }
-  },options = list(scrollX = TRUE, scrollY = '400px'))
+    else if(selectedTask == 'Linear Noise Approximation'){
+      return(resTask()$covariance_matrix)
+    }
+    else
+      return(NULL)
+  })
   
   output$tablePEexp <- DT::renderDataTable({
     if (error() != '' || is.null(resTask()))
@@ -512,7 +492,7 @@ server <- function(input, output, session) {
     }
   })
   
-  output$plot <- renderPlot({
+  output$plotTC <- renderPlot({
     if (error() != '' || is.null(resTask()) || is.null(input$columns))
       return(NULL)
     
@@ -529,7 +509,7 @@ server <- function(input, output, session) {
       textOutput('error')
     }
   })
-  
+
   ## To load the output UI showing table/Plot
   output$show_output<- renderUI({
     selectedTask <- selection()
@@ -545,19 +525,19 @@ server <- function(input, output, session) {
       tabsetPanel(id = 'mdlTable',tabPanel('Stoichiometry Matrix',DT::dataTableOutput('tableStoich')),tabPanel('Link Matrix',DT::dataTableOutput('tableLM')))
     }
     else if (selectedTask == 'Time Course'){
-      tabsetPanel(id = 'TC',tabPanel('Time Course',DT::dataTableOutput('tableResults')),tabPanel('Plot', plotOutput('plot')))
+      tabsetPanel(id = 'TC',tabPanel('Time Course',DT::dataTableOutput('tableResults1')),tabPanel('Plot', plotOutput('plotTC')))
     }
     else if (selectedTask == 'Steady State'){
-      tabsetPanel(id = 'SS',tabPanel('Steady State', DT::dataTableOutput('tableSS')),tabPanel('Jacobian', DT::dataTableOutput('tableJac')))
+      tabsetPanel(id = 'SS',tabPanel('Steady State', DT::dataTableOutput('tableResults1')),tabPanel('Jacobian', DT::dataTableOutput('tableResults2')))
     }
     else if(selectedTask == 'Metabolic Control Analysis'){
-      tabPanel('Table',DT::dataTableOutput('tableResults'))
+      tabPanel('Table',DT::dataTableOutput('tableResults1'))
     }
     else if(selectedTask == 'Optimization'){
-      tabsetPanel(id = 'PE',tabPanel('Main',DT::dataTableOutput('tableResults')),tabPanel('Optimized Parameters',DT::dataTableOutput('tablePEfit')))
+      tabsetPanel(id = 'PE',tabPanel('Main',DT::dataTableOutput('tableResults1')),tabPanel('Optimized Parameters',DT::dataTableOutput('tableResults2')))
     }
     else if(selectedTask == 'Parameter Estimation'){
-      tabsetPanel(id = 'PE',tabPanel('Main',DT::dataTableOutput('tableResults')),tabPanel('Fitted Parameters',DT::dataTableOutput('tablePEfit')),tabPanel('Experiments', DT::dataTableOutput('tablePEexp')))
+      tabsetPanel(id = 'PE',tabPanel('Main',DT::dataTableOutput('tableResults1')),tabPanel('Fitted Parameters',DT::dataTableOutput('tableResults2')),tabPanel('Experiments', DT::dataTableOutput('tablePEexp')))
     }
     else if(selectedTask == 'Linear Noise Approximation'){
       tabPanel('Table',DT::dataTableOutput('tableResults1'))
