@@ -72,8 +72,8 @@ server <- function(input, output, session) {
     inputFile$settingsPE <- CoRC::getParameterEstimationSettings(model=inputFile$modelData)
     inputFile$taskList <- c('Compartments', 'Species', 'Reactions'
                             ,'Global Quantities', 'Events', 'Parameters'
-                            ,'Steady State', 'Stoichiometric Analysis','Mass Conservation'
-                            ,'Time Course', 'Metabolic Control Analysis','Optimization'
+                            ,'Stoichiometry','Steady State','Time Course'
+                            ,'Metabolic Control Analysis','Optimization'
                             ,'Parameter Estimation', 'Linear Noise Approximation')
   })
   
@@ -314,9 +314,6 @@ server <- function(input, output, session) {
       if (selectedTask == 'Steady State'){
         writeData <- resTask()$species[,c('name','concentration','rate','transition_time')]
       }
-      else if (selectedTask == 'Stoichiometric Analysis'){
-        
-      }
       else if (selectedTask == 'Time Course' && 'Time' %in% names(resTask()$result) && !is.null(input$columns)){
         writeData <- resTask()$result[, c('Time',input$columns), drop = FALSE]
       }
@@ -472,7 +469,25 @@ server <- function(input, output, session) {
     return(tableModel)
   },options = list(scrollX = TRUE, scrollY = '400px'))
   
-  
+  output$tableLM <- DT::renderDataTable({
+    if (is.null(inputFile$modelData))
+      return()
+    colNames <- colnames(inputFile$linkMatrix)
+    data <- data.frame(inputFile$linkMatrix)
+    data <- formattable(data, list(area(col = colnames(data)) ~ color_tile('lightpink', 'lightgreen')))
+    colnames(data) <- colNames
+    return(as.datatable(data,options = list(scrollX = TRUE, scrollY = '400px')))
+  })
+  output$tableStoich <- DT::renderDataTable({
+    if (is.null(inputFile$modelData))
+      return()
+    colNames <- colnames(inputFile$stoichiometry)
+    data <- data.frame(inputFile$stoichiometry)
+    data <- formattable(data, list(area(col = colnames(data)) ~ color_tile('lightpink', 'lightgreen')))
+    colnames(data) <- colNames
+    return(as.datatable(data,options = list(scrollX = TRUE, scrollY = '400px')))
+  })
+
 #### To render UI and plots for different tasks ####
   output$plotOverview <- renderPlot({
     selectedTask <- selection()
@@ -524,8 +539,11 @@ server <- function(input, output, session) {
       tabsetPanel(id = 'mdl',tabPanel('Table',DT::dataTableOutput('tableModel')),tabPanel('Overview', plotOutput('plotOverview')))
     }
     else if (selectedTask %in% c('Reactions','Compartments', 'Events')){
-        tabPanel('Table',DT::dataTableOutput('tableModel'))
-      }
+        tabPanel('mdlTable',DT::dataTableOutput('tableModel'))
+    }
+    else if(selectedTask == 'Stoichiometry'){
+      tabsetPanel(id = 'mdlTable',tabPanel('Stoichiometry Matrix',DT::dataTableOutput('tableStoich')),tabPanel('Link Matrix',DT::dataTableOutput('tableLM')))
+    }
     else if (selectedTask == 'Time Course'){
       tabsetPanel(id = 'TC',tabPanel('Time Course',DT::dataTableOutput('tableResults')),tabPanel('Plot', plotOutput('plot')))
     }
@@ -542,10 +560,7 @@ server <- function(input, output, session) {
       tabsetPanel(id = 'PE',tabPanel('Main',DT::dataTableOutput('tableResults')),tabPanel('Fitted Parameters',DT::dataTableOutput('tablePEfit')),tabPanel('Experiments', DT::dataTableOutput('tablePEexp')))
     }
     else if(selectedTask == 'Linear Noise Approximation'){
-      tabPanel('Table',DT::dataTableOutput('tableResults'))
-    }
-    else if(selectedTask == 'Mass Conservation'){
-      tabsetPanel(id = 'MC',tabPanel('Stoichiometry',DT::dataTableOutput('tableStoich')),tabPanel('Link Matrix',DT::dataTableOutput('tableLM')))
+      tabPanel('Table',DT::dataTableOutput('tableResults1'))
     }
     else{
     }
@@ -598,7 +613,7 @@ server <- function(input, output, session) {
     }
     output = tagList()
     selectedTask <- selection()
-    if (selectedTask %in% c('Reactions','Species','Compartments', 'Global Quantities','Events','Parameters')){
+    if (selectedTask %in% c('Reactions','Species','Compartments', 'Global Quantities','Events','Parameters','Stoichiometry')){
       output[[1]] = ''
     }
     else if (selectedTask %in% c('Steady State','Linear Noise Approximation')){
@@ -651,13 +666,13 @@ server <- function(input, output, session) {
       output[[3]] = actionButton('runTask', 'Run Task',icon=icon('angle-double-right'))
       output[[4]] = downloadButton('downloadData', 'Download Results')
     }
-    output
+    return(output)
   })
   
   ### Tree structure for task selection
   output$taskSelection <- renderTree({ 
-    structTree =list('Model'= structure(list('Compartments'= structure('1',sticon=''),'Species'= structure('2',sticon=''),'Reactions'= structure('3',sticon=''),'Global Quantities'= structure('4',sticon=''),'Events'= structure('5',sticon=''),'Parameters'= structure('6',sticon='')), sticon='')
-                     ,'Tasks'= structure(list('Steady State'= structure('1',sticon=''),'Stoichiometric Analysis'= structure(list('Mass Conservation'= structure('1',sticon='')),sticon=''),'Time Course'= structure('2',sticon=''),'Metabolic Control Analysis'= structure('3',sticon=''),'Optimization'= structure('4',sticon=''),'Parameter Estimation'= structure('5',sticon=''),'Linear Noise Approximation'= structure('6',sticon='')), sticon=''))
+    structTree =list('Model'= structure(list('Compartments'= structure('1',sticon=''),'Species'= structure('2',sticon=''),'Reactions'= structure('3',sticon=''),'Global Quantities'= structure('4',sticon=''),'Events'= structure('5',sticon=''),'Parameters'= structure('6',sticon=''),'Stoichiometry'= structure('7',sticon='')),sticon='')
+                     ,'Tasks'= structure(list('Steady State'= structure('1',sticon=''),'Time Course'= structure('2',sticon=''),'Metabolic Control Analysis'= structure('3',sticon=''),'Optimization'= structure('4',sticon=''),'Parameter Estimation'= structure('5',sticon=''),'Linear Noise Approximation'= structure('6',sticon='')), sticon=''))
     #attr(structTree[[1]],'stopened')=TRUE 
     structTree
   })
