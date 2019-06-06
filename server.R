@@ -67,9 +67,9 @@ server <- function(input, output, session) {
     inputFile$parameters <- CoRC::getParameters(model=inputFile$modelData)
     inputFile$stoichiometry <- CoRC::getStoichiometryMatrix(model=inputFile$modelData)
     inputFile$linkMatrix <- CoRC::getLinkMatrix(model=inputFile$modelData)
-    inputFile$settingsTC <- CoRC::getTimeCourseSettings(model=inputFile$modelData)
-    inputFile$settingsOpt <- CoRC::getOptimizationSettings(model=inputFile$modelData)
-    inputFile$settingsPE <- CoRC::getParameterEstimationSettings(model=inputFile$modelData)
+    inputFile$settingsTC <- CoRC::getTC(model=inputFile$modelData)
+    inputFile$settingsOpt <- CoRC::getOpt(model=inputFile$modelData)
+    inputFile$settingsPE <- CoRC::getPE(model=inputFile$modelData)
     inputFile$taskList <- c('Compartments', 'Species', 'Reactions'
                             ,'Global Quantities', 'Events', 'Parameters'
                             ,'Stoichiometry','Steady State','Time Course'
@@ -265,8 +265,8 @@ server <- function(input, output, session) {
     progress$set(message = paste('Running ', selectedTask), value = 0)
 
     if (selectedTask %in% c('Steady State','Linear Noise Approximation')){
-      if (selectedTask == 'Steady State') settingTask = CoRC::getSteadyStateSettings(model=modelData)
-      else settingTask = CoRC::getLinearNoiseApproximationSettings(model=modelData)
+      if (selectedTask == 'Steady State') settingTask = CoRC::getSS(model=modelData)
+      else settingTask = CoRC::getLNA(model=modelData)
       settingTask$method$resolution = input$resolution
       settingTask$method$derivation_factor = input$derivationFac
       settingTask$method$use_newton = input$useNewton
@@ -279,7 +279,7 @@ server <- function(input, output, session) {
       resTask <- tryCatch(CoRC::runTC(duration=input$obsTime,dt=input$obsIntervalSize,start_in_steady_state=input$startSteady,method=input$timeCourseSelection,model=modelData,save_result_in_memory = T), warning = function(warning_condition){return(warning_condition) }, error = function(error_condition){return(error_condition) })
     }
     else if(selectedTask == 'Metabolic Control Analysis'){
-      settingTask = CoRC::getMetabolicControlAnalysisSettings(model=modelData)
+      settingTask = CoRC::getMCA(model=modelData)
       settingTask$method$modulation_factor = input$modulationFactor
       settingTask$method$use_reder = input$useReder
       settingTask$method$use_smallbone = input$useSmallbone
@@ -598,11 +598,11 @@ server <- function(input, output, session) {
     }
     else if (selectedTask %in% c('Steady State','Linear Noise Approximation')){
       if (selectedTask == 'Steady State'){
-        if (!is.null(inputFile$modelData)) settingTask = CoRC::getSteadyStateSettings(model=inputFile$modelData)
+        if (!is.null(inputFile$modelData)) settingTask = CoRC::getSS(model=inputFile$modelData)
         output[[1]] = splitLayout(checkboxInput('calculateJacobian','calculate Jacobian', value= ifelse(is.null(inputFile$modelData), T, settingTask$calculate_jacobian)),checkboxInput('performStabilityAnalysis','perform Stability Analysis', value= ifelse(is.null(inputFile$modelData), T, settingTask$perform_stability_analysis)))
       }
       else {
-        if (!is.null(inputFile$modelData))settingTask = CoRC::getLinearNoiseApproximationSettings(model=inputFile$modelData)
+        if (!is.null(inputFile$modelData))settingTask = CoRC::getLNA(model=inputFile$modelData)
         output[[1]] = checkboxInput('lnaSelection','perform Steady State Analysis',value = ifelse(is.null(inputFile$modelData), T, settingTask$perform_steady_state_analysis))
       }
       output[[2]] = splitLayout(numericInput('resolution', 'Resolution:', ifelse(is.null(inputFile$modelData), 1e-9, settingTask$method$resolution), min = 1e-9, max = 1),numericInput('derivationFac', 'Derivation Factor:', ifelse(is.null(inputFile$modelData), 1e-3, settingTask$method$derivation_factor), min = 1e-3, max = 1))
@@ -627,7 +627,7 @@ server <- function(input, output, session) {
       output[[5]] = downloadButton('downloadData', 'Download Results')
     }
     else if (selectedTask == 'Metabolic Control Analysis'){
-      if (!is.null(inputFile$modelData)) settingTask = CoRC::getMetabolicControlAnalysisSettings(model=inputFile$modelData)
+      if (!is.null(inputFile$modelData)) settingTask = CoRC::getMCA(model=inputFile$modelData)
       output[[1]] = checkboxInput('mcaSelection','perform Steady State Analysis',value = T)
       output[[2]] = numericInput('modulationFactor', 'Modulation Factor:', ifelse(is.null(inputFile$modelData), 1e-9, settingTask$method$modulation_factor), min = 1e-9, max = 1)
       output[[3]] = splitLayout(checkboxInput('useReder','Use Reder', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_reder)),checkboxInput('useSmallbone','Use Smallbone', value= ifelse(is.null(inputFile$modelData), T, settingTask$method$use_smallbone)))
