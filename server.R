@@ -545,6 +545,13 @@ server <- function(input, output, session) {
     else{
     }
   })
+  output$SSmsg <- renderText({
+    selectedTask <- selection()
+    resStr =ifelse(selectedTask == 'Steady State' && !is.null(resTask()$result),resTask()$result,ifelse(!is.null(resTask()$result_ss),resTask()$result_ss,return(NULL)))
+    if(resStr == 'found') return('<pre> <b> Steady state found !!</b></pre>')
+    else if(resStr == 'foundEquilibrium') return('<pre> <b> Equilibrium steady state found!!</b></pre>')
+    else return('<pre> <b> No steady state found !!</b></pre>')
+  })
   
 #### To choose species for table and plot output ** ONLY FOR TIME_COURSE ** ####
   output$choose_columns <- renderUI({
@@ -552,10 +559,12 @@ server <- function(input, output, session) {
     if(error() != '' || is.null(resTask()))
       return(NULL)
     selectedTask <- selection()
-    data <- resTask()$result
     output = tagList()
-    
-    if (selectedTask == 'Time Course' && 'Time' %in% names(data)){
+    if (selectedTask %in% c('Steady State','Linear Noise Approximation')){
+      output[[1]] =  htmlOutput('SSmsg')
+    }
+    else if (selectedTask == 'Time Course' && 'Time' %in% names(resTask()$result)){
+      data <- resTask()$result
       # Get the data set with the appropriate name
       melted <- melt(data,id.vars='Time')
       colnames(melted)[2:3] <- c('Species', 'Number')
@@ -564,7 +573,7 @@ server <- function(input, output, session) {
       # Create the checkboxes and select them all by default
       output[[2]] = checkboxGroupInput('columns', '', choices  = colnames, selected = colnames, inline = T)
     }
-    output
+    return(output)
   })
   
   observeEvent(input$showAll,{
