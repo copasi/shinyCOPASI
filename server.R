@@ -662,7 +662,8 @@ server <- function(input, output, session) {
   output$taskSelection <- renderTree({ 
     structTree =list('Model'= structure(list('Compartments'= structure('1',sticon=''),'Species'= structure('2',sticon=''),'Reactions'= structure('3',sticon=''),'Global Quantities'= structure('4',sticon=''),'Events'= structure('5',sticon=''),'Parameters'= structure('6',sticon=''),'Stoichiometry'= structure('7',sticon='')),sticon='')
                      ,'Tasks'= structure(list('Steady State'= structure('1',sticon=''),'Time Course'= structure('2',sticon=''),'Metabolic Control Analysis'= structure('3',sticon=''),'Optimization'= structure('4',sticon=''),'Parameter Estimation'= structure('5',sticon=''),'Linear Noise Approximation'= structure('6',sticon='')), sticon=''))
-    #attr(structTree[[1]],'stopened')=TRUE 
+    attr(structTree[[1]],'stopened')=TRUE
+    attr(structTree[[2]],'stopened')=TRUE 
     structTree
   })
 }
