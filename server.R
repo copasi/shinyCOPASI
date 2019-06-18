@@ -88,6 +88,7 @@ server <- function(input, output, session) {
     if (is.null(inputFile$modelData))
       return()
     selectedTask = selection()
+    strOut= paste('<h1>','Model Name:', inputFile$modelAttrs[[2]],'</h1>')
     if (selectedTask %in% inputFile$taskList ){
       if (selectedTask == 'Parameter Estimation' ){
         expfileName= ''
@@ -123,14 +124,14 @@ server <- function(input, output, session) {
           else
             valfileName= paste(' <font color=','red','>  Please load a valid data file along with the model. File name: <b>', valfileName ,'</b> </font> ')
         }
-        strOut= paste('<h2>',selectedTask,'</h2>')
+        strOut= paste(strOut, '<h2>',selectedTask,'</h2>')
         strOut= paste(strOut, '<pre><b> Experimental Data: </b>',expfileName,'<br> <br>')
         strOut= paste(strOut, '<b>Validation Data: </b>',valfileName,'<br>')
         strOut= paste(strOut, '<pre><b> Randomize Start Values: </b>',inputFile$settingsPE$randomize_start_values)
         strOut= paste(strOut, '<b>  Calculate Statistics: </b>',inputFile$settingsPE$calculate_statistics, '</pre></pre>')
       }
       else if (selectedTask == 'Optimization' ){
-        strOut= paste('<h2>',selectedTask,'</h2>')
+        strOut= paste(strOut, '<h2>',selectedTask,'</h2>')
         strOut= paste(strOut, '<pre><b> Expression: </b>',inputFile$settingsOpt$expression)
         strOut= paste(strOut, '<pre><b> Maxmize: </b>',inputFile$settingsOpt$maximize, '</pre>')
         strOut= paste(strOut, '<b>Subtask: </b>',inputFile$settingsOpt$subtask)
@@ -138,7 +139,7 @@ server <- function(input, output, session) {
         strOut= paste(strOut, '<b>  Calculate Statistics: </b>',inputFile$settingsOpt$calculate_statistics, '</pre></pre>')
       }
       else
-        strOut= paste('<h2>',selectedTask,'</h2>')
+        strOut= paste(strOut,'<h2>',selectedTask,'</h2>')
     }
     else if (selectedTask == 'Model' || inputFile$modelLoaded == T){
       strOut= paste('<pre><b> Model: </b>',inputFile$modelAttrs[[2]],'<br>')
