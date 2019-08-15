@@ -1,3 +1,5 @@
+# Copyright (C) 2019 by Abhishekh Gupta, Pedro Mendes and The University of Connecticut
+# distributed under the Artistic License 2.0
 
 check.packages <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, 'Package'])]
