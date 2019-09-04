@@ -44,7 +44,7 @@ The generic version of ShinyCOPASI is available at [http://shiny.copasi.org/](ht
 ShinyCOPASI's interface (Figure \ref{interface}) mimics that of the COPASI standalone application as much as possible. It includes three panels: one to choose model and tasks, another to display the task specifications, and another to display results. The generic and model-specific versions differ only in the model selection panel: the generic version allows the user to load a model (in COPASI .cps or SBML formats), while the model-specific version immediately loads a model hosted on the server. Additionally, the latter also allows downloading the corresponding .cps file.
 
 ![ShinyCOPASI interface\label{interface}](ShinyCOPASI-generic.png)
-*Figure 1: ShinyCOPASI user interface showing results of a time course simulation for the repressilator model[@Elowitz2000], which was obtained from Biomodels in SBML format.*
+*Figure 1: ShinyCOPASI user interface showing results of a time course simulation for the repressilator model [@Elowitz2000], which was obtained from Biomodels in SBML format.*
 
 The leftmost panel allows the user to visualize the _Model_ components, namely  _Compartments_, _Species_, _Reactions_, _Parameters_, _Global Quantities_ and _Events_. Note that this interface does not allow modifications to be made on the model. The _Tasks_ section includes a subset of COPASI tasks, those currently supported by CoRC: _Steady State_, _Stoichiometry_, _Time Course_, _Metabolic Control Analysis_, _Optimization_, _Parameter Estimation_ and _Linear Noise Approximation_. 
 
