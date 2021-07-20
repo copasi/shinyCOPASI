@@ -1,0 +1,88 @@
+Bootstrap: zypper
+MirrorURL: http://download.opensuse.org/tumbleweed/repo/oss/
+Include: zypper
+
+%help
+    This Singularity image is intended to serve the ShinyCOPASI web application.
+
+%files
+    # Being explicit about what files to copy into the container,
+    # so as not to accidentally get any previous container builds
+    # baked in (at least).
+    ../about.md /shinyCOPASI/
+    ../ArtisticLicense.txt /shinyCOPASI/
+    ../Figures /shinyCOPASI/
+    ../paper /shinyCOPASI/
+    ../README.md /shinyCOPASI/
+    ../server.R /shinyCOPASI/
+    ../singularity/build.def /shinyCOPASI/singularity/
+    ../title.md /shinyCOPASI/
+    ../ui.R /shinyCOPASI/
+    ../User_Guide.md /shinyCOPASI/
+    ../www /shinyCOPASI/
+
+%post
+    # This is what happens after the base OS userland distribution is installed.
+    # Here is where to download and install additional software.
+
+    update-ca-certificates
+
+    # nice to have
+    zypper install --force-resolution --no-confirm less
+    zypper install --force-resolution --no-confirm vim
+
+    # Install R dependencies
+    # 'shiny','shinyjs', 'remotes', 'reshape2', 'ggplot2', 'shinyTree', 'markdown', 'formattable','XML','DT'
+    zypper install --force-resolution --no-confirm gcc gcc-c++ gcc-fortran
+
+    # need to work around a bug in the installed zlib package, where the libz will get removed
+    # before rpm will need that lib to unpack the replacement to install.
+    TMPZDIR=/usr/local/lib64
+    mkdir -p $TMPZDIR
+    cp /usr/lib64/libz.so.1* $TMPZDIR
+    ldconfig
+    zypper install --force-resolution --no-confirm libxml2-devel
+    rm $TMPZDIR/libz.so.1*
+    ldconfig
+
+#    zypper install --force-resolution --no-confirm -t pattern devel_basis
+    zypper install --force-resolution --no-confirm libcurl-devel
+    zypper install --force-resolution --no-confirm libopenssl-devel
+    zypper install --force-resolution --no-confirm fontconfig-devel
+    zypper install --force-resolution --no-confirm libgit2-devel
+    zypper install --force-resolution --no-confirm harfbuzz-devel
+    zypper install --force-resolution --no-confirm fribidi-devel
+    zypper install --force-resolution --no-confirm freetype2-devel
+    zypper install --force-resolution --no-confirm libtiff-devel
+    zypper install --force-resolution --no-confirm tar gzip
+    zypper install --force-resolution --no-confirm libpng16-compat-devel
+    zypper install --force-resolution --no-confirm cairo-devel
+    zypper install --force-resolution --no-confirm libXt-devel
+    zypper install --force-resolution --no-confirm libjpeg8-devel
+    zypper install --force-resolution --no-confirm udunits2-devel
+    zypper install --force-resolution --no-confirm geos-devel
+    zypper install --force-resolution --no-confirm gdal-devel
+    zypper install --force-resolution --no-confirm proj-devel
+    zypper install --force-resolution --no-confirm proj
+
+    zypper install --force-resolution --no-confirm R-base
+    Rscript -e 'install.packages("shiny", repos="http://cran.r-project.org", dependencies = TRUE)'
+    Rscript -e 'install.packages("shinyjs", repos="http://cran.r-project.org", dependencies = TRUE)'
+    Rscript -e 'install.packages("remotes", repos="http://cran.r-project.org", dependencies = TRUE)'
+    Rscript -e 'remotes::install_github("jpahle/CoRC")'
+    Rscript -e 'install.packages("reshape2", repos="http://cran.r-project.org", dependencies = TRUE)'
+    Rscript -e 'install.packages("ggplot2", repos="http://cran.r-project.org", dependencies = TRUE)'
+    Rscript -e 'install.packages("shinyTree", repos="http://cran.r-project.org", dependencies = TRUE)'
+    Rscript -e 'install.packages("markdown", repos="http://cran.r-project.org", dependencies = TRUE)'
+    Rscript -e 'install.packages("formattable", repos="http://cran.r-project.org", dependencies = TRUE)'
+    Rscript -e 'install.packages("XML", repos="http://cran.r-project.org", dependencies = TRUE)'
+    Rscript -e 'install.packages("DT", repos="http://cran.r-project.org", dependencies = TRUE)'
+
+%startscript
+    nohup  Rscript -e "shiny::runApp('/shinyCOPASI', host = `${URL}`, port = ${PORT})" > /dev/null 2>&1 < /dev/null &
+
+%environment
+    PAGER=/usr/bin/less
+    URL=localhost
+    PORT=4285
+    export PAGER URL PORT
