@@ -8,12 +8,11 @@ check.packages <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 
-packages<-c('shiny','devtools', 'reshape2', 'ggplot2', 'shinyTree', 'markdown', 'formattable','XML')
+packages<-c('shiny','remotes', 'reshape2', 'ggplot2', 'shinyTree', 'markdown', 'formattable','XML')
 check.packages(packages)
 
 if(!('CoRC' %in% installed.packages()[, 'Package'])){
   install_github('jpahle/CoRC')
-  CoRC::getCopasi()
 }
 
 ui <- fluidPage(list(tags$head(HTML('<link rel="icon", href="COPASI-logo.png", type="image/png" />'))),
