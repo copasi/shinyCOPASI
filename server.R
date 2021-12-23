@@ -505,7 +505,7 @@ server <- function(input, output, session) {
       data <- data[, c('Time',input$columns), drop = FALSE]
       melted <- melt(data,id.vars='Time')
       colnames(melted)[2:3] <- c('Species', 'Number')
-      plot <- ggplot(melted, aes(x=Time, y=Number, group=Species, color= Species)) + geom_line(size = 1) + theme_classic(base_size = 18) + ggtitle('Time-course of selected species') + ylab('#') + xlab('Time (s)') + theme_pm()
+      plot <- ggplot(melted, aes(x=Time, y=Number, group=Species, color= Species)) + geom_line(size = 1) + theme_classic(base_size = 18) + ggtitle('Time-course of selected species') + ylab('#') + xlab(paste('Time',getTimeUnit())) + theme_pm()
       print(plot)
     }
     else{
